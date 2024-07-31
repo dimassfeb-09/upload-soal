@@ -43,6 +43,23 @@ function App() {
       toast.success("Berhasil tambah soal baru!")
     } catch (error) {
       console.error('Error inserting data:', error);
+    } finally {
+      await fetchData();
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      const { data: fetchedData, error } = await supabase
+        .from('soal')
+        .select('*')
+        .eq('matkul_id', selectedMatkul)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setData(fetchedData || []);
+    } catch (error) {
+      toast.error('Failed to fetch data');
     }
   };
 
