@@ -102,7 +102,7 @@ function App() {
   }
 
   return (
-    <div className="bg-gray-700 h-auto w-full p-20">
+    <div className="bg-gray-700 h-auto w-full p-5 sm:p-10 md:p-20">
       <h1 className='text-3xl font-bold text-white'>
         DARI PADA CEK GAMBAR SATU-SATU MENDING COPY PASTE SINI SOAL-NYA
       </h1>
