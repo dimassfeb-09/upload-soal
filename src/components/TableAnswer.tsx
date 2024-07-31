@@ -13,6 +13,7 @@ interface TableAnswerProps {
 const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name, setData }) => {
     const [lastUpdated, setLastUpdated] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
 
     // Fetch data from Supabase
     const fetchData = async () => {
@@ -63,6 +64,19 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
         }
     }, [matkul_id]);
 
+    useEffect(() => {
+        if (data.length > 0) {
+            const highlightIndex = 0;
+            setHighlightedRow(highlightIndex);
+
+            const timer = setTimeout(() => {
+                setHighlightedRow(null);
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [data]);
+
     return (
         <div className="relative overflow-x-auto mt-20">
             <div className="text-3xl font-bold text-white">
@@ -97,8 +111,14 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                             </td>
                         </tr>
                     ) : (
-                        data.map((item) => (
-                            <tr key={item.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                        data.map((item, index) => (
+                            <tr
+                                key={item.id}
+                                className={`border-b dark:border-gray-700 ${highlightedRow === index
+                                    ? 'bg-gray-200 dark:bg-gray-600'
+                                    : 'bg-white dark:bg-gray-800'
+                                    }`}
+                            >
                                 <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
                                     <div dangerouslySetInnerHTML={{ __html: item.question }} />
                                 </th>
