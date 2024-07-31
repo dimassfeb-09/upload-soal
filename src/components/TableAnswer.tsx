@@ -74,7 +74,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
     }, [data]);
 
     return (
-        <div className="relative overflow-x-auto mt-20">
+        <div className="relative overflow-x-auto mt-20 border rounded-md p-5">
             <div className="text-3xl font-bold text-white">
                 JAWABAN REALTIME MATKUL: {matkul_name} <div className="text-orange-500 font-bold">
                     Otomatis update ketika ada data baru!!!
