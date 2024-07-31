@@ -7,9 +7,9 @@ interface RadioAnswerProps {
 
 const RadioAnswer: React.FC<RadioAnswerProps> = ({ selectedOption, onOptionChange }) => {
     return (
-        <div>
+        <div className='border p-5'>
             <h1 className='text-white font-bold'>Pilih jawaban yang bener!</h1>
-            <div className='grid grid-cols-2 gap-4'>
+            <div className='grid grid-cols-2 gap-4 mt-5'>
                 {['A', 'B', 'C', 'D'].map(option => (
                     <div key={option} className="flex items-center ps-4 border border-gray-200 rounded">
                         <input

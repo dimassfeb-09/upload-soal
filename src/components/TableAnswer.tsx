@@ -12,12 +12,10 @@ interface TableAnswerProps {
 
 const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name, setData }) => {
     const [lastUpdated, setLastUpdated] = useState<string>('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
 
     // Fetch data from Supabase
     const fetchData = async () => {
-        setIsLoading(true);
         try {
             const { data: fetchedData, error } = await supabase
                 .from('soal')
@@ -30,8 +28,6 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
             setLastUpdated(new Date().toLocaleString());
         } catch (error) {
             toast.error('Failed to fetch data');
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -80,23 +76,25 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
     return (
         <div className="relative overflow-x-auto mt-20">
             <div className="text-3xl font-bold text-white">
-                JAWABAN REALTIME MATKUL: {matkul_name}
+                JAWABAN REALTIME MATKUL: {matkul_name} <div className="text-orange-500 font-bold">
+                    Otomatis update ketika ada data baru!!!
+                </div>
             </div>
 
-            <div className="mt-10 text-white font-bold">
-                Terakhir Update: {isLoading ? 'Loading...' : lastUpdated}
-            </div>
+
+
+            <div className='text-white font-bold'>{lastUpdated != '' ? `Terakhir Update: ${lastUpdated}` : ''}</div>
 
             <table className="w-full mt-5 text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
                     <tr>
                         <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
                             Soal
-                            <p className="text-red-500">Yang terbaru paling atas</p>
+                            <p className="text-orange-500">terbaru paling atas</p>
                         </th>
                         <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
                             Jawaban
-                            <p className="text-red-500 font-bold">belum tentu bener, dicek dulu ya!</p>
+                            <p className="text-orange-500 font-bold">belum tentu bener, dicek dulu ya!</p>
                         </th>
                         <th scope="col" className="px-6 py-3">
                             Dikirim pada

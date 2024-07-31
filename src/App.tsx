@@ -91,12 +91,12 @@ function App() {
       </h1>
 
       <div>
-        <p className='text-red-500'>Download Extention Absolute Enable Right Click & Copy dulu <a className='text-blue-500 underline' target='_blank' href="https://chromewebstore.google.com/detail/absolute-enable-right-cli/jdocbkpgdakpekjlhemmfcncgdjeiika?hl=en">di sini</a>
+        <p className='text-orange-500 font-bold'>Download Extention Absolute Enable Right Click & Copy dulu <a className='text-blue-500 underline' target='_blank' href="https://chromewebstore.google.com/detail/absolute-enable-right-cli/jdocbkpgdakpekjlhemmfcncgdjeiika?hl=en">di sini</a>
         </p>
 
       </div>
 
-      <form className='mt-5' onSubmit={handleSubmit}>
+      <form className='mt-5 border rounded-md p-10' onSubmit={handleSubmit}>
         <MatkulSelect
           selectedOption={selectedMatkul}
           setSelectedMatkulName={setSelectedMatkulName}
