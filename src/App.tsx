@@ -52,7 +52,7 @@ function App() {
       const { error } = await supabase
         .from('soal')
         .insert([{ question, answer, matkul_id }]);
-
+      SendMessagesNewSoal();
       if (error) throw error;
     } catch (error) {
       console.error('Error inserting new data:', error);
@@ -63,6 +63,26 @@ function App() {
   const formatText = (text: string) => {
     return text.replace(/\n/g, '<br>');
   };
+
+  const SendMessagesNewSoal = () => {
+    // Join a room/topic. Can be anything except for 'realtime'.
+    const channelB = supabase.channel(`room-${selectedMatkul}`)
+
+    channelB.subscribe((status) => {
+      // Wait for successful connection
+      if (status !== 'SUBSCRIBED') {
+        return null
+      }
+
+      // Send a message once the client is subscribed
+      channelB.send({
+        type: 'broadcast',
+        event: 'new-soal',
+        payload: { message: 'Ada soal baru nih!' },
+      })
+    })
+
+  }
 
   return (
     <div className="bg-gray-700 h-auto w-full p-20">

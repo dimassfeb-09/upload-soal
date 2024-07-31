@@ -14,52 +14,75 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
     const [lastUpdated, setLastUpdated] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
+    // Fetch data from Supabase
     const fetchData = async () => {
         setIsLoading(true);
         try {
             const { data: fetchedData, error } = await supabase
                 .from('soal')
                 .select('*')
-                .eq("matkul_id", matkul_id)
+                .eq('matkul_id', matkul_id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
             setData(fetchedData || []);
             setLastUpdated(new Date().toLocaleString());
         } catch (error) {
-            toast.error("Failed to fetch data");
+            toast.error('Failed to fetch data');
         } finally {
-            setTimeout(() => {
-                setIsLoading(false);
-            }, 1000);
+            setIsLoading(false);
         }
+    };
+
+    // Fetch data and send a success message
+    const fetchAndSendingMessage = async () => {
+        try {
+            await fetchData();
+            toast.success('Ada soal baru nih!');
+        } catch (error) {
+            toast.error('Failed to fetch data');
+        }
+    };
+
+    // Set up real-time subscription
+    const listeningNewData = () => {
+        const channel = supabase.channel(`room-${matkul_id}`);
+        channel
+            .on('broadcast', { event: 'new-soal' }, () => fetchAndSendingMessage())
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     };
 
     useEffect(() => {
         if (matkul_id !== 0) {
             fetchData();
-            const interval = setInterval(fetchData, 10000);
-            return () => clearInterval(interval);
+            listeningNewData();
         }
     }, [matkul_id]);
 
     return (
         <div className="relative overflow-x-auto mt-20">
-            <div className='text-3xl font-bold text-white'>
+            <div className="text-3xl font-bold text-white">
                 JAWABAN REALTIME MATKUL: {matkul_name}
             </div>
 
-            <div className='mt-10 text-white font-bold'>
-                Terakhir Update (10 detik sekali): {isLoading ? "Loading..." : lastUpdated}
+            <div className="mt-10 text-white font-bold">
+                Terakhir Update: {isLoading ? 'Loading...' : lastUpdated}
             </div>
+
             <table className="w-full mt-5 text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
                     <tr>
                         <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
-                            Soal <p className='text-red-500'>Yang terbaru paling atas</p>
+                            Soal
+                            <p className="text-red-500">Yang terbaru paling atas</p>
                         </th>
                         <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
-                            Jawaban <p className='text-red-500 font-bold'>belum tentu bener, dicek dulu ya!</p>
+                            Jawaban
+                            <p className="text-red-500 font-bold">belum tentu bener, dicek dulu ya!</p>
                         </th>
                         <th scope="col" className="px-6 py-3">
                             Dikirim pada
