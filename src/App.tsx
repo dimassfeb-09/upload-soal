@@ -3,6 +3,7 @@ import './output.css';
 import './input.css';
 import Question from './components/Question';
 import { toast } from 'react-toastify';
+import { Analytics } from "@vercel/analytics/react"
 import RadioAnswer from './components/RadioAnswer';
 import TableAnswer from './components/TableAnswer';
 import supabase from './utils/supabase';
@@ -182,6 +183,8 @@ function App() {
       </div>
 
       <FloatingActionButton onClick={scrollToTop} />
+
+      <Analytics/>
     </div>
   );
 }
