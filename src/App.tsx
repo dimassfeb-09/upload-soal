@@ -9,6 +9,7 @@ import supabase from './utils/supabase';
 import 'react-toastify/dist/ReactToastify.css';
 import MatkulSelect from './components/MatkulSelect';
 import { AnswerData } from './types/AnswerData';
+import FloatingActionButton from './components/FloatingActionButton'; // Import the FAB component
 
 function App() {
   const [question, setQuestion] = useState<string>('');
@@ -42,11 +43,12 @@ function App() {
       setQuestion('');
       setSelectedAnswer('');
       setSource('');
-      toast.success("Berhasil tambah soal baru!")
+      toast.success("Berhasil tambah soal baru!");
     } catch (error) {
       console.error('Error inserting data:', error);
     } finally {
       await fetchData();
+      scrollToTop(); // Scroll to top after data is fetched
     }
   };
 
@@ -100,8 +102,11 @@ function App() {
         payload: { message: 'Ada soal baru nih!' },
       })
     })
-
   }
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="bg-gray-700 h-auto w-full p-5 sm:p-10 md:p-20">
@@ -149,6 +154,9 @@ function App() {
         matkul_id={selectedMatkul}
         matkul_name={selectedMatkulName}
       />
+
+      {/* Add the Floating Action Button */}
+      <FloatingActionButton onClick={scrollToTop} />
     </div>
   );
 }
