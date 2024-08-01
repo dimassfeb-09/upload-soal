@@ -13,6 +13,7 @@ interface TableAnswerProps {
 const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name, setData }) => {
     const [lastUpdated, setLastUpdated] = useState<string>('');
     const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     // Fetch data from Supabase
     const fetchData = async () => {
@@ -74,6 +75,12 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
         }
     }, [data]);
 
+    const filteredData = data.filter(item =>
+        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.source.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div className="relative overflow-x-auto mt-20 border rounded-md p-5">
             <div className="text-3xl font-bold text-white">
@@ -82,9 +89,15 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                 </div>
             </div>
 
-
-
             <div className='text-white font-bold'>{lastUpdated != '' ? `Terakhir Update: ${lastUpdated}` : ''}</div>
+
+            <input
+                type="text"
+                placeholder="Bisa search di sini atau CTRL + F"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="mt-3 p-2 border rounded-md w-full"
+            />
 
             <table className="w-full mt-5 text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
@@ -106,14 +119,14 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                     </tr>
                 </thead>
                 <tbody>
-                    {data.length === 0 ? (
+                    {filteredData.length === 0 ? (
                         <tr>
-                            <td colSpan={3} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                            <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                                 Data is Empty
                             </td>
                         </tr>
                     ) : (
-                        data.map((item, index) => (
+                        filteredData.map((item, index) => (
                             <tr
                                 key={item.id}
                                 className={`border-b dark:border-gray-700 ${highlightedRow === index
