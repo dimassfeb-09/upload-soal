@@ -36,6 +36,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
     const fetchAndSendingMessage = async () => {
         try {
             await fetchData();
+            toast.success('Ada soal baru nih!');
         } catch (error) {
             toast.error('Failed to fetch data');
         } finally {
