@@ -76,9 +76,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
     }, [data]);
 
     const filteredData = data.filter(item =>
-        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.source.toLowerCase().includes(searchQuery.toLowerCase())
+        (item.question?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (item.answer?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (item.source?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -89,14 +89,16 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                 </div>
             </div>
 
-            <div className='text-white font-bold'>{lastUpdated != '' ? `Terakhir Update: ${lastUpdated}` : ''}</div>
+            <div className='text-white font-bold'>{lastUpdated !== '' ? `Terakhir Update: ${lastUpdated}` : ''}</div>
 
             <input
                 type="text"
-                placeholder="Bisa search di sini atau CTRL + F"
+                placeholder="Search here or use CTRL + F"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="mt-3 p-2 border rounded-md w-full"
+                aria-label="Search"
+                role="searchbox"
             />
 
             <table className="w-full mt-5 text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
@@ -139,7 +141,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                                     {item.answer}
                                 </td>
                                 <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
-                                    <div dangerouslySetInnerHTML={{ __html: item.question }} />
+                                    <div dangerouslySetInnerHTML={{ __html: item.question || '' }} />
                                 </th>
                                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
                                     {item.source}
