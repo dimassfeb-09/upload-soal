@@ -97,6 +97,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                             Jawaban
                             <p className="text-orange-500 font-bold">belum tentu bener, dicek dulu ya!</p>
                         </th>
+                        <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
+                            Sumber
+                        </th>
                         <th scope="col" className="px-6 py-3">
                             Dikirim pada
                         </th>
@@ -123,6 +126,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                                 </th>
                                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
                                     {item.answer}
+                                </td>
+                                <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                                    {item.source}
                                 </td>
                                 <td className="px-6 py-4">
                                     {new Date(item.created_at).toLocaleString()}

@@ -15,6 +15,7 @@ function App() {
   const [data, setData] = useState<AnswerData[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
   const [selectedMatkul, setSelectedMatkul] = useState<number>(0);
+  const [source, setSource] = useState<string>('');
   const [selectedMatkulName, setSelectedMatkulName] = useState<string>('');
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -68,7 +69,7 @@ function App() {
       question = formatText(question);
       const { error } = await supabase
         .from('soal')
-        .insert([{ question, answer, matkul_id }]);
+        .insert([{ question, answer, matkul_id, source }]);
       SendMessagesNewSoal();
       if (error) throw error;
     } catch (error) {
@@ -110,15 +111,24 @@ function App() {
       <div>
         <p className='text-orange-500 font-bold'>Download Extention Absolute Enable Right Click & Copy dulu <a className='text-blue-500 underline' target='_blank' href="https://chromewebstore.google.com/detail/absolute-enable-right-cli/jdocbkpgdakpekjlhemmfcncgdjeiika?hl=en">di sini</a>
         </p>
-
       </div>
 
       <form className='mt-5 border rounded-md p-10' onSubmit={handleSubmit}>
+
         <MatkulSelect
           selectedOption={selectedMatkul}
           setSelectedMatkulName={setSelectedMatkulName}
           onOptionChange={handleSelectedMatkulChange}
         />
+        <h1 className='text-4xl text-white font-bold mt-10'>INPUT SOAL</h1>
+        <div className='mt-5'>
+          <label htmlFor="source" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Sumber (Coursehero/Vclass)</label>
+          <input
+            type="text"
+            id="source"
+            className="bg-gray-50 border border-white text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-white dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Masukkan sumber, sertakan link jika ada"
+            onChange={(e) => setSource(e.target.value)} />
+        </div>
         <Question
           text={question}
           onTextChange={handleTextChange}
