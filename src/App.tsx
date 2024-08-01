@@ -15,6 +15,7 @@ import FloatingActionButton from './components/FloatingActionButton';
 function App() {
   const [question, setQuestion] = useState<string>('');
   const [data, setData] = useState<AnswerData[]>([]);
+  const [alertMessage, setAlertMessage] = useState<string>("");
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
   const [selectedMatkul, setSelectedMatkul] = useState<number>(() => {
     const savedMatkul = localStorage.getItem('selectedMatkul');
@@ -23,11 +24,11 @@ function App() {
   const [source, setSource] = useState<string>('');
   const [selectedMatkulName, setSelectedMatkulName] = useState<string>('');
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setQuestion(e.target.value);
   };
 
-  const handleOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectedAnswerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedAnswer(e.target.value);
   };
 
@@ -36,24 +37,25 @@ function App() {
     setSelectedMatkul(selectedId);
     setSelectedMatkulName(e.target.options[e.target.selectedIndex].text);
     setData([]);
-    localStorage.setItem('selectedMatkul', selectedId.toString()); // Save to localStorage
+    localStorage.setItem('selectedMatkul', selectedId.toString());
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setAlertMessage("");
+
+    if (!handleRequiredField()) return;
+
     const formattedQuestion = formatText(question);
 
     try {
       await insertNewData(formattedQuestion, selectedAnswer, selectedMatkul);
-      setQuestion('');
-      setSelectedAnswer('');
-      setSource('');
+      resetForm();
       toast.success("Berhasil tambah soal baru!");
     } catch (error) {
       console.error('Error inserting data:', error);
     } finally {
       await fetchData();
-      setSource('');
       scrollToTop();
     }
   };
@@ -75,12 +77,11 @@ function App() {
 
   const insertNewData = async (question: string, answer: string, matkul_id: number) => {
     try {
-      question = formatText(question);
       const { error } = await supabase
         .from('soal')
         .insert([{ question, answer, matkul_id, source }]);
-      SendMessagesNewSoal();
       if (error) throw error;
+      sendMessagesNewSoal();
     } catch (error) {
       console.error('Error inserting new data:', error);
       throw error;
@@ -91,17 +92,16 @@ function App() {
     return text.replace(/\n/g, '<br>');
   };
 
-  const SendMessagesNewSoal = () => {
+  const sendMessagesNewSoal = () => {
     const channelB = supabase.channel(`room-${selectedMatkul}`);
     channelB.subscribe((status) => {
-      if (status !== 'SUBSCRIBED') {
-        return null;
+      if (status === 'SUBSCRIBED') {
+        channelB.send({
+          type: 'broadcast',
+          event: 'new-soal',
+          payload: { message: 'Ada soal baru nih!' },
+        });
       }
-      channelB.send({
-        type: 'broadcast',
-        event: 'new-soal',
-        payload: { message: 'Ada soal baru nih!' },
-      });
     });
 
     return () => {
@@ -111,6 +111,24 @@ function App() {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRequiredField = () => {
+    if (question.trim() === "") setAlertMessage("Soal tidak boleh kosong");
+    if (selectedAnswer.trim() === "") setAlertMessage("Pilih salah satu jawaban yang benar");
+    if (selectedMatkul === 0) setAlertMessage("Pilih mata kuliah terlebih dahulu");
+
+    if (alertMessage !== "") {
+      toast.error(alertMessage);
+      return false;
+    }
+    return true;
+  };
+
+  const resetForm = () => {
+    setQuestion('');
+    setSelectedAnswer('');
+    setSource('');
   };
 
   useEffect(() => {
@@ -157,11 +175,11 @@ function App() {
 
             <Question
               text={question}
-              onTextChange={handleTextChange}
+              onTextChange={handleQuestionChange}
             />
             <RadioAnswer
               selectedOption={selectedAnswer}
-              onOptionChange={handleOptionChange}
+              onOptionChange={handleSelectedAnswerChange}
             />
             <button
               type="submit"
