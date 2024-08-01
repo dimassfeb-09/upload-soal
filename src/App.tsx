@@ -126,43 +126,47 @@ function App() {
         </p>
       </div>
 
-      <form className='mt-5 border rounded-md p-10' onSubmit={handleSubmit}>
-        <MatkulSelect
-          selectedOption={selectedMatkul}
-          setSelectedMatkulName={setSelectedMatkulName}
-          onOptionChange={handleSelectedMatkulChange}
-        />
-        <h1 className='text-4xl text-white font-bold mt-10'>INPUT SOAL</h1>
+      <form className='' onSubmit={handleSubmit}>
         <div className='mt-5'>
-          <div className="mb-6">
-            <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-              Sumber / Pengirim <span className='text-red-500 font-bold'>(OPSIONAL)</span>
-            </label>
-            <input
-              type="text"
-              id="source"
-              className="bg-gray-50 border  text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-              placeholder="Masukkan sumber, sertakan link jika ada"
-              onChange={(e) => setSource(e.target.value)}
-              required />
+          <MatkulSelect
+            selectedOption={selectedMatkul}
+            setSelectedMatkulName={setSelectedMatkulName}
+            onOptionChange={handleSelectedMatkulChange}
+          />
+        </div>
+        <div className='border rounded-md p-5 mt-5'>
+          <h1 className='text-4xl text-white font-bold'>INPUT SOAL</h1>
+          <div className='mt-5'>
+            <div className="mb-6">
+              <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                Sumber / Pengirim <span className='text-red-500 font-bold'>(OPSIONAL)</span>
+              </label>
+              <input
+                type="text"
+                id="source"
+                className="bg-gray-50 border  text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                placeholder="Masukkan sumber, sertakan link jika ada"
+                onChange={(e) => setSource(e.target.value)}
+                required />
+            </div>
+
           </div>
 
+          <Question
+            text={question}
+            onTextChange={handleTextChange}
+          />
+          <RadioAnswer
+            selectedOption={selectedAnswer}
+            onOptionChange={handleOptionChange}
+          />
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center w-full py-2.5 mt-5 text-lg font-medium text-center text-white bg-blue-700 rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 hover:bg-blue-800"
+          >
+            Kirim
+          </button>
         </div>
-
-        <Question
-          text={question}
-          onTextChange={handleTextChange}
-        />
-        <RadioAnswer
-          selectedOption={selectedAnswer}
-          onOptionChange={handleOptionChange}
-        />
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center w-full py-2.5 mt-5 text-lg font-medium text-center text-white bg-blue-700 rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 hover:bg-blue-800"
-        >
-          Kirim
-        </button>
 
       </form>
 
