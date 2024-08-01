@@ -41,6 +41,7 @@ function App() {
       await insertNewData(formattedQuestion, selectedAnswer, selectedMatkul);
       setQuestion('');
       setSelectedAnswer('');
+      setSource('');
       toast.success("Berhasil tambah soal baru!")
     } catch (error) {
       console.error('Error inserting data:', error);
