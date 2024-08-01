@@ -55,6 +55,10 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
         };
     };
 
+    const clearSearchQuery = () => {
+        setSearchQuery('');
+    }
+
     useEffect(() => {
         if (matkul_id !== 0) {
             fetchData();
@@ -82,78 +86,87 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
     );
 
     return (
-        <div className="relative overflow-x-auto mt-20 border rounded-md p-5">
+        <div className="mt-5 border rounded-md p-5">
             <div className="text-3xl font-bold text-white">
-                JAWABAN REALTIME MATKUL: {matkul_name} <div className="text-orange-500 font-bold">
-                    Otomatis update ketika ada data baru!!!
+                Real-Time Jawaban <span className='text-red-500'>{matkul_name}</span>
+                <div className="text-orange-500 font-bold mt-2">
+                    Data otomatis terupdate ketika ada data baru.
                 </div>
             </div>
 
-            <div className='text-white font-bold'>{lastUpdated !== '' ? `Terakhir Update: ${lastUpdated}` : ''}</div>
+            <div className='text-white font-bold mt-3'>{lastUpdated !== '' ? `Last Updated: ${lastUpdated}` : ''}</div>
+            <div className="flex items-center mt-3 px-2 h-10 border rounded-md w-full bg-white">
+                <div className='ml-2'>🔍</div>
+                <input
+                    type="text"
+                    placeholder="Search here or use CTRL + F"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-full ml-5 px-2 border-none focus:border-none"
+                    aria-label="Search"
+                    role="searchbox"
+                />
+                {
+                    searchQuery ? <div className='mr-2 cursor-pointer' onClick={clearSearchQuery}>X</div> : <></>
+                }
+            </div>
 
-            <input
-                type="text"
-                placeholder="Search here or use CTRL + F"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="mt-3 p-2 border rounded-md w-full"
-                aria-label="Search"
-                role="searchbox"
-            />
 
-            <table className="w-full mt-5 text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
-                    <tr>
-                        <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
-                            Jawaban
-                            <p className="text-orange-500 font-bold">belum tentu bener, dicek dulu ya!</p>
-                        </th>
-                        <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
-                            Soal
-                            <p className="text-orange-500">terbaru paling atas</p>
-                        </th>
 
-                        <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
-                            Sumber
-                        </th>
-                        <th scope="col" className="px-6 py-3">
-                            Dikirim pada
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredData.length === 0 ? (
+            <div className="overflow-x-auto mt-5">
+                <table className="relative w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
+                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-dark-gray dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
                         <tr>
-                            <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                                Data is Empty
-                            </td>
+                            <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
+                                #
+                            </th>
+                            <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
+                                Jawaban
+                            </th>
+                            <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
+                                Soal
+                            </th>
                         </tr>
-                    ) : (
-                        filteredData.map((item, index) => (
-                            <tr
-                                key={item.id}
-                                className={`border-b dark:border-gray-700 ${highlightedRow === index
-                                    ? 'bg-gray-200 dark:bg-gray-600'
-                                    : 'bg-white dark:bg-gray-800'
-                                    }`}
-                            >
-                                <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
-                                    {item.answer}
-                                </td>
-                                <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
-                                    <div dangerouslySetInnerHTML={{ __html: item.question || '' }} />
-                                </th>
-                                <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
-                                    {item.source}
-                                </td>
-                                <td className="px-6 py-4">
-                                    {new Date(item.created_at).toLocaleString()}
+                    </thead>
+                    <tbody>
+                        {filteredData.length === 0 ? (
+                            <tr>
+                                <td colSpan={3} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                    Data is Empty
                                 </td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+                        ) : (
+                            filteredData.map((item, index) => (
+                                <tr
+                                    key={item.id}
+                                    className={`border-b dark:border-gray-700 ${highlightedRow === index
+                                        ? 'bg-gray-200 dark:bg-gray-600'
+                                        : 'bg-white dark:bg-gray-800'
+                                        }`}
+                                >
+                                    <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                                        <div className='bg-blue-600 p-1 w-min h-min rounded-full text-xs'>{item.id}</div>
+                                        <div className='mt-3'>{new Date(item.created_at).toLocaleString()}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-2xl font-bold text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                                        {item.answer}
+                                    </td>
+                                    <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                                        <div dangerouslySetInnerHTML={{ __html: item.question || '' }} />
+                                        <div className='mt-5'>
+                                            {item.source !== '' && (
+                                                <>
+                                                    Sumber <span className='text-blue-400'>{item.source}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </th>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             <ToastContainer
                 position="top-right"
