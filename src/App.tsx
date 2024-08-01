@@ -122,7 +122,7 @@ function App() {
         />
         <h1 className='text-4xl text-white font-bold mt-10'>INPUT SOAL</h1>
         <div className='mt-5'>
-          <label htmlFor="source" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Sumber (Coursehero/Vclass)</label>
+          <label htmlFor="source" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Sumber (Coursehero/Vclass) <span className='text-red-500 font-bold'>(OPSIONAL)</span></label>
           <input
             type="text"
             id="source"
