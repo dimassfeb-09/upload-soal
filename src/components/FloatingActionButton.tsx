@@ -10,7 +10,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ onClick }) 
             onClick={onClick}
             className="fixed bottom-6 h-16 w-16 right-6 bg-blue-700 text-white rounded-full shadow-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-            <span className="text-xl">↑ Scroll To Top</span> {/* You can use any icon or text here */}
+            <span className="text-md">↑ Scroll</span> {/* You can use any icon or text here */}
         </button>
     );
 };
