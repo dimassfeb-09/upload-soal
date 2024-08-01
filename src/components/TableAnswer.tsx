@@ -103,13 +103,14 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b border-gray-300 dark:border-gray-600">
                     <tr>
                         <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
-                            Soal
-                            <p className="text-orange-500">terbaru paling atas</p>
-                        </th>
-                        <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
                             Jawaban
                             <p className="text-orange-500 font-bold">belum tentu bener, dicek dulu ya!</p>
                         </th>
+                        <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
+                            Soal
+                            <p className="text-orange-500">terbaru paling atas</p>
+                        </th>
+
                         <th scope="col" className="px-6 py-3 border-r border-gray-300 dark:border-gray-600">
                             Sumber
                         </th>
@@ -134,12 +135,12 @@ const TableAnswer: React.FC<TableAnswerProps> = ({ matkul_id, data, matkul_name,
                                     : 'bg-white dark:bg-gray-800'
                                     }`}
                             >
-                                <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
-                                    <div dangerouslySetInnerHTML={{ __html: item.question }} />
-                                </th>
                                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
                                     {item.answer}
                                 </td>
+                                <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                                    <div dangerouslySetInnerHTML={{ __html: item.question }} />
+                                </th>
                                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
                                     {item.source}
                                 </td>
