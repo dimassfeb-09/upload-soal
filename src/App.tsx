@@ -122,16 +122,25 @@ function App() {
   };
 
   const handleRequiredField = () => {
-    if (question.trim() === "") setAlertMessage("Soal tidak boleh kosong");
-    if (selectedAnswer.trim() === "")
-      setAlertMessage("Pilih salah satu jawaban yang benar");
-    if (selectedMatkul === 0)
-      setAlertMessage("Pilih mata kuliah terlebih dahulu");
+    let hasError = false;
+    let message = "";
 
-    if (alertMessage !== "") {
-      toast.error(alertMessage);
+    if (selectedMatkul === 0) {
+      message = "Pilih mata kuliah terlebih dahulu";
+      hasError = true;
+    } else if (question === "") {
+      message = "Soal tidak boleh kosong";
+      hasError = true;
+    } else if (selectedAnswer === "") {
+      message = "Pilih salah satu jawaban yang benar";
+      hasError = true;
+    }
+
+    if (hasError) {
+      toast.error(message);
       return false;
     }
+
     return true;
   };
 
