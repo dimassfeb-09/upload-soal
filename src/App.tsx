@@ -15,7 +15,6 @@ import FloatingActionButton from "./components/FloatingActionButton";
 function App() {
   const [question, setQuestion] = useState<string>("");
   const [data, setData] = useState<AnswerData[]>([]);
-  const [alertMessage, setAlertMessage] = useState<string>("");
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [selectedMatkul, setSelectedMatkul] = useState<number>(() => {
     const savedMatkul = localStorage.getItem("selectedMatkul");
@@ -46,7 +45,6 @@ function App() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setAlertMessage("");
 
     if (!handleRequiredField()) return;
 
