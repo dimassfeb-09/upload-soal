@@ -201,9 +201,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
   const confirmAnswer = (isCorrect: boolean, soalId: number) => {
     Swal.fire({
-      title: "Confirm?",
-      text: "Make sure the answer is correct. This vote will be counted.",
-      icon: "warning",
+      title: "CONFIRM?",
+      text: "JIKA INGIN VOTE PASTIKAN JAWABAN BENAR, JANGAN ASAL.",
+      icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
