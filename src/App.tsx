@@ -73,7 +73,7 @@ function App() {
       if (error) throw error;
       setData(fetchedData || []);
     } catch (error) {
-      toast.error("Failed to fetch data");
+      console.log("failed to fetch data");
     }
   };
 

@@ -46,7 +46,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
       setLastUpdated(new Date().toLocaleString());
       setDataUpdated(true);
     } catch (error) {
-      toast.error("Failed to fetch data");
+      console.log("Failed to fetch data");
     }
   }, [matkul_id, setData]);
 
@@ -89,7 +89,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
       setVoteCounts(counts);
     } catch (error) {
       console.error("Error fetching vote counts:", error);
-      toast.error("Failed to fetch vote counts");
+      console.log("Failed to fetch vote counts");
     }
   };
 
@@ -101,7 +101,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         toast.success(message);
         setDataUpdated(false);
       } catch (error) {
-        toast.error("Failed to fetch data");
+        console.log("Failed to fetch data");
       }
     },
     [fetchData, fetchVoteCounts]
@@ -204,7 +204,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
       await fetchVoteCounts();
       sendMessagesNewVote(soalId);
     } catch (error) {
-      toast.error("Failed to record answer");
+      console.log("Failed to record answer");
     }
   };
 
