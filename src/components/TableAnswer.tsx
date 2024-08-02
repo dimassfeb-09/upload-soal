@@ -115,6 +115,8 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   }, [matkul_id]);
 
   const subscribeToNewData = useCallback(() => {
+    console.log("execcc");
+
     const channel = supabase.channel(`room-${matkul_id}`);
 
     channel
@@ -158,7 +160,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         unsubscribeVote();
       };
     }
-  }, [matkul_id, fetchData, subscribeToNewData, subscribeToVote]);
+  }, [matkul_id, fetchData, subscribeToNewData]);
 
   useEffect(() => {
     fetchVoteCounts();
