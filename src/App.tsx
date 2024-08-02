@@ -58,6 +58,7 @@ function App() {
       toast.success("Berhasil tambah soal baru!");
     } catch (error) {
       console.error("Error inserting data:", error);
+      setIsLoading(false);
     } finally {
       setIsLoading(false);
       await fetchData();
