@@ -93,7 +93,7 @@ function App() {
       if (error) throw error;
       sendMessagesNewSoal();
     } catch (error) {
-      console.error("Error inserting new data:", error);
+      toast.error("Gagal kirim soal, kirim ulang!");
       throw error;
     }
   };
