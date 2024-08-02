@@ -29,7 +29,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [voteCounts, setVoteCounts] = useState<Record<number, VoteCount>>({});
   const [dataUpdated, setDataUpdated] = useState<boolean>(false);
-  const [timeCloseToast, setTimeCloseToast] = useState<number>(4000);
+  const [timeCloseToast, setTimeCloseToast] = useState<number>(500);
 
   const inputSearchRef = useRef<HTMLInputElement>(null);
 
