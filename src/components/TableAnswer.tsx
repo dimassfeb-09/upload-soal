@@ -158,7 +158,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         unsubscribeVote();
       };
     }
-  }, [matkul_id, fetchData]);
+  }, [matkul_id, fetchData, subscribeToNewData, subscribeToVote]);
 
   useEffect(() => {
     fetchVoteCounts();
