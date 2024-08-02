@@ -4,5 +4,7 @@ export type AnswerData = {
     question: string;
     answer: string;
     source: string;
+    correct_counts: number,
+    incorrect_counts: number;
     created_at: string;
 }

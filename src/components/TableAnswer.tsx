@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import supabase from "./../utils/supabase";
 import { toast, Bounce, ToastContainer } from "react-toastify";
-import Swal from "sweetalert2";
-import "sweetalert2/dist/sweetalert2.min.css";
+import "react-toastify/dist/ReactToastify.css"; // Importing toastify css
 import { AnswerData } from "../types/AnswerData";
+import { RealtimeChannel } from "@supabase/supabase-js";
 import BarCorrectChart from "./BarCorrectChart";
+import Swal from "sweetalert2";
 
 interface TableAnswerProps {
   data: AnswerData[];
@@ -13,10 +14,10 @@ interface TableAnswerProps {
   matkul_name: string;
 }
 
-interface VoteCount {
-  correct: number;
-  incorrect: number;
-}
+type SoalData = {
+  correct_counts: number;
+  incorrect_counts: number;
+};
 
 const TableAnswer: React.FC<TableAnswerProps> = ({
   matkul_id,
@@ -27,13 +28,12 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [voteCounts, setVoteCounts] = useState<Record<number, VoteCount>>({});
   const [dataUpdated, setDataUpdated] = useState<boolean>(false);
-  const [timeCloseToast, setTimeCloseToast] = useState<number>(500);
-
   const inputSearchRef = useRef<HTMLInputElement>(null);
+  const subscriptionRef = useRef<RealtimeChannel | null>(null);
+  const voteChannelRef = useRef<RealtimeChannel | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchAnswers = useCallback(async () => {
     try {
       const { data: fetchedData, error } = await supabase
         .from("soal")
@@ -50,121 +50,141 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     }
   }, [matkul_id, setData]);
 
-  const fetchVoteCounts = async () => {
-    try {
-      const soalIds = data.map((item) => item.id);
-
-      if (soalIds.length === 0) return;
-
-      const { data: votes, error } = await supabase.rpc("get_vote_counts_v1", {
-        soal_ids: soalIds,
-      });
-
-      if (error) throw error;
-
-      const counts: Record<number, VoteCount> = {};
-
-      votes?.forEach(
-        (vote: { soal_id: number; count: number; is_correct: boolean }) => {
-          const soalId =
-            typeof vote.soal_id === "string"
-              ? parseInt(vote.soal_id, 10)
-              : vote.soal_id;
-          const count =
-            typeof vote.count === "string"
-              ? parseInt(vote.count, 10)
-              : vote.count;
-
-          if (!counts[soalId]) {
-            counts[soalId] = { correct: 0, incorrect: 0 };
-          }
-          if (vote.is_correct) {
-            counts[soalId].correct = count;
-          } else {
-            counts[soalId].incorrect = count;
-          }
-        }
-      );
-
-      setVoteCounts(counts);
-    } catch (error) {
-      console.error("Error fetching vote counts:", error);
-      console.log("Failed to fetch vote counts");
-    }
-  };
-
-  const fetchAndSendSuccessMessage = useCallback(
+  const fetchAnswersAndNotifySuccess = useCallback(
     async (message: string) => {
       try {
-        await fetchData();
-        await fetchVoteCounts();
+        await fetchAnswers();
         toast.success(message);
         setDataUpdated(false);
       } catch (error) {
         console.log("Failed to fetch data");
       }
     },
-    [fetchData, fetchVoteCounts]
+    [fetchAnswers]
   );
 
-  useEffect(() => {
-    if (matkul_id !== 0) {
-      fetchData();
-      listeningNewData();
-    }
-  }, [matkul_id]);
-
-  const subscribeToNewData = useCallback(() => {
-    console.log("execcc");
-
+  const createNewAnswerSubscription = useCallback(() => {
     const channel = supabase.channel(`room-${matkul_id}`);
 
     channel
       .on("broadcast", { event: "new-soal" }, () => {
         if (dataUpdated) {
-          fetchAndSendSuccessMessage("Ada soal baru nih!");
+          fetchAnswersAndNotifySuccess("Ada soal baru nih!");
         }
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [matkul_id, fetchAndSendSuccessMessage, dataUpdated]);
+    return channel;
+  }, [matkul_id, fetchAnswersAndNotifySuccess, dataUpdated]);
 
-  const subscribeToVote = useCallback(() => {
-    const channel = supabase.channel(`room-${matkul_id}`);
+  const createVoteSubscription = useCallback(() => {
+    const channel = supabase.channel(`vote-room-${matkul_id}`);
 
     channel
       .on("broadcast", { event: "new-vote" }, (payload) => {
-        fetchAndSendSuccessMessage(
-          `Ada vote baru nih! ID-${payload.payload.soal_id}`
-        );
+        toast.info(payload.message);
+        fetchAnswers(); // Optionally, refetch answers to update UI
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [matkul_id, fetchVoteCounts]);
+    return channel;
+  }, [matkul_id, fetchAnswers]);
 
-  const clearSearchQuery = () => setSearchQuery("");
+  const broadcastNewVoteNotification = useCallback(() => {
+    const channel = supabase.channel(`vote-room-${matkul_id}`);
+
+    channel
+      .send({
+        type: "broadcast",
+        event: "new-vote",
+        payload: { message: "Ada vote baru nih!" },
+      })
+      .catch((error) => console.error("Failed to broadcast vote:", error));
+  }, [matkul_id]);
+
+  const handleVoteAnswer = async (isCorrect: boolean, soalId: number) => {
+    try {
+      const columnToUpdate: "correct_counts" | "incorrect_counts" = isCorrect
+        ? "correct_counts"
+        : "incorrect_counts";
+
+      const { data, error: fetchError } = await supabase
+        .from("soal")
+        .select(columnToUpdate)
+        .eq("id", soalId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (!data) throw new Error("Data not found");
+
+      const currentCount = (data as SoalData)[columnToUpdate];
+
+      if (typeof currentCount !== "number")
+        throw new Error("Invalid data type for count");
+
+      const newCount = currentCount + 1;
+
+      const { error: updateError } = await supabase
+        .from("soal")
+        .update({ [columnToUpdate]: newCount })
+        .eq("id", soalId);
+
+      if (updateError) throw updateError;
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to record answer");
+    } finally {
+      broadcastNewVoteNotification();
+      toast.success(`Vote recorded for question ${soalId}!`);
+    }
+  };
+
+  const confirmVoteAnswer = (isCorrect: boolean, soalId: number) => {
+    Swal.fire({
+      title: "CONFIRM?",
+      text: "PASTIKAN SEBELUM MELAKUKAN VOTE, JANGAN ASAL.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes",
+      cancelButtonText: "No",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        handleVoteAnswer(isCorrect, soalId);
+      }
+    });
+  };
 
   useEffect(() => {
     if (matkul_id !== 0) {
-      fetchData();
-      const unsubscribeNewData = subscribeToNewData();
-      const unsubscribeVote = subscribeToVote();
-      return () => {
-        unsubscribeNewData();
-        unsubscribeVote();
-      };
-    }
-  }, [matkul_id, fetchData, subscribeToNewData, subscribeToVote]);
+      fetchAnswers();
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+      subscriptionRef.current = createNewAnswerSubscription();
 
-  useEffect(() => {
-    fetchVoteCounts();
-  }, [data]);
+      if (voteChannelRef.current) {
+        supabase.removeChannel(voteChannelRef.current);
+      }
+      voteChannelRef.current = createVoteSubscription();
+    }
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+      if (voteChannelRef.current) {
+        supabase.removeChannel(voteChannelRef.current);
+      }
+    };
+  }, [
+    matkul_id,
+    fetchAnswers,
+    createNewAnswerSubscription,
+    createVoteSubscription,
+  ]);
 
   useEffect(() => {
     if (data.length > 0) {
@@ -189,79 +209,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   }, []);
 
   const handleSearchActive = () => {
-    setTimeCloseToast(500);
     toast.info("Pencarian Aktif");
-  };
-
-  const handleAnswer = async (isCorrect: boolean, soalId: number) => {
-    try {
-      const { error } = await supabase
-        .from("correct_answer")
-        .insert([{ is_correct: isCorrect, soal_id: soalId }]);
-
-      if (error) throw error;
-      toast.success(`Vote recorded for question ${soalId}!`);
-      await fetchVoteCounts();
-      sendMessagesNewVote(soalId);
-    } catch (error) {
-      console.log("Failed to record answer");
-    }
-  };
-
-  // Fetch data and send a success message
-  const fetchAndSendingMessage = async () => {
-    try {
-      await fetchData();
-    } catch (error) {
-      console.log("Failed to fetch data");
-    } finally {
-      toast.success("Ada soal baru nih!");
-    }
-  };
-
-  const confirmAnswer = (isCorrect: boolean, soalId: number) => {
-    Swal.fire({
-      title: "CONFIRM?",
-      text: "PASTIKAN SEBELUM MELAKUKAN VOTE, JANGAN ASAL.",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes",
-      cancelButtonText: "No",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        handleAnswer(isCorrect, soalId);
-      }
-    });
-  };
-
-  const listeningNewData = () => {
-    const channel = supabase.channel(`room-${matkul_id}`);
-    channel
-      .on("broadcast", { event: "new-soal" }, () => fetchAndSendingMessage())
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const sendMessagesNewVote = (soalId: number) => {
-    const channel = supabase.channel(`room-${matkul_id}`);
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        channel.send({
-          type: "broadcast",
-          event: "new-vote",
-          payload: { message: "New vote received!", soal_id: soalId },
-        });
-      }
-    });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   const filteredData = data.filter(
@@ -276,9 +224,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   return (
     <div className="mt-5 xl:mt-0 border rounded-md p-5 h-full flex flex-col">
       <div className="text-3xl font-bold text-white">
-        Real-Time Jawaban <span className="text-red-500">{matkul_name}</span>
+        Real-Time Jawaban <span className="text-orange-500">{matkul_name}</span>
         <div className="font-bold text-lg mt-2">
-          Data automatically updates when new data is available.
+          Data otomatis update ketika terdapat data baru.
         </div>
       </div>
 
@@ -302,7 +250,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         {searchQuery && (
           <div
             className="cursor-pointer text-xs pr-2"
-            onClick={clearSearchQuery}
+            onClick={() => setSearchQuery("")}
           >
             ❌
           </div>
@@ -361,8 +309,8 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                         </div>
 
                         <BarCorrectChart
-                          correctCount={voteCounts[item.id]?.correct || 0}
-                          incorrectCount={voteCounts[item.id]?.incorrect || 0}
+                          correctCount={item.correct_counts}
+                          incorrectCount={item.incorrect_counts}
                         />
                       </div>
 
@@ -370,6 +318,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                         {new Date(item.created_at).toLocaleString()}
                       </div>
                     </td>
+
                     <td className="px-6 py-4 text-4xl font-bold text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
                       <div className="text-center">{item.answer}</div>
                       <hr className="mt-5" />
@@ -377,21 +326,22 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                         <div>Vote</div>
                         <div className="flex gap-3 mt-2">
                           <button
-                            className="bg-teal-500 px-2 py-1"
-                            onClick={() => confirmAnswer(true, item.id)}
+                            className="bg-teal-500 px-2 py-1 hover:bg-teal-700 border rounded-sm"
+                            onClick={() => confirmVoteAnswer(true, item.id)}
                           >
                             Benar
                           </button>
                           <button
-                            className="bg-red-500 px-2 py-1"
-                            onClick={() => confirmAnswer(false, item.id)}
+                            className="bg-red-500 hover:opacity-50 px-2 py-1 hover:bg-red-700 border rounded-sm"
+                            onClick={() => confirmVoteAnswer(false, item.id)}
                           >
                             Salah
                           </button>
                         </div>
                       </div>
                     </td>
-                    <th
+
+                    <td
                       scope="row"
                       className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600"
                     >
@@ -406,7 +356,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                           <span className="text-blue-400">{item.source}</span>
                         </div>
                       )}
-                    </th>
+                    </td>
                   </tr>
                 ))
               )}
@@ -417,7 +367,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
       <ToastContainer
         position="top-right"
-        autoClose={timeCloseToast}
+        autoClose={500}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick

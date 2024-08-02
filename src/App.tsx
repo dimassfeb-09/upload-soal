@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./output.css";
 import "./input.css";
 import Question from "./components/Question";
@@ -11,62 +11,62 @@ import "react-toastify/dist/ReactToastify.css";
 import MatkulSelect from "./components/MatkulSelect";
 import { AnswerData } from "./types/AnswerData";
 import FloatingActionButton from "./components/FloatingActionButton";
+import SourceInput from "./components/SourceInput";
+import SubmitButton from "./components/SubmitButton";
 
 function App() {
   const [question, setQuestion] = useState<string>("");
   const [data, setData] = useState<AnswerData[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
-  const [selectedMatkul, setSelectedMatkul] = useState<number>(() => {
-    const savedMatkul = localStorage.getItem("selectedMatkul");
-    return savedMatkul ? parseInt(savedMatkul, 10) : 0;
-  });
+  const [selectedMatkul, setSelectedMatkul] = useState<number>(0);
   const [source, setSource] = useState<string>("");
   const [selectedMatkulName, setSelectedMatkulName] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const handleQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const updateQuestionText = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setQuestion(e.target.value);
   };
 
-  const handleSelectedAnswerChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const updateSelectedAnswer = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedAnswer(e.target.value);
   };
 
-  const handleSelectedMatkulChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const updateSelectedMatkul = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedId = parseInt(e.target.value, 10);
     setSelectedMatkul(selectedId);
     setSelectedMatkulName(e.target.options[e.target.selectedIndex].text);
     setData([]);
-    localStorage.setItem("selectedMatkul", selectedId.toString());
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const submitQuestion = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!handleRequiredField()) return;
+    if (!validateRequiredFields()) {
+      setIsLoading(false);
+      return;
+    }
 
-    const formattedQuestion = formatText(question);
+    const formattedQuestion = convertLineBreaksToHtml(question);
 
     try {
-      await insertNewData(formattedQuestion, selectedAnswer, selectedMatkul);
-      resetForm();
+      await addNewQuestion(formattedQuestion, selectedAnswer, selectedMatkul);
+      clearFormFields();
       toast.success("Berhasil tambah soal baru!");
     } catch (error) {
-      console.error("Error inserting data:", error);
+      toast.error("Gagal kirim soal, kirim ulang!");
       setIsLoading(false);
     } finally {
-      setIsLoading(false);
-      await fetchData();
-      scrollToTop();
+      await loadAnswers();
+      scrollToTopOfPage();
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 1000);
     }
   };
 
-  const fetchData = async () => {
+  const loadAnswers = useCallback(async () => {
+    console.log("hahahahahahha");
     try {
       const { data: fetchedData, error } = await supabase
         .from("soal")
@@ -74,35 +74,42 @@ function App() {
         .eq("matkul_id", selectedMatkul)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Failed to fetch answers: ${error.message}`);
+      }
+
       setData(fetchedData || []);
     } catch (error) {
-      console.log("failed to fetch data");
+      console.error("Error fetching answers:", error);
+      toast.error("Failed to load answers. Please try again.");
     }
-  };
+  }, [selectedMatkul]);
 
-  const insertNewData = async (
+  const addNewQuestion = async (
     question: string,
     answer: string,
-    matkul_id: number
+    matkul_id: number,
+    source?: string
   ) => {
     try {
       const { error } = await supabase
         .from("soal")
         .insert([{ question, answer, matkul_id, source }]);
+
       if (error) throw error;
-      sendMessagesNewSoal();
+
+      broadcastNewQuestionNotification();
     } catch (error) {
-      toast.error("Gagal kirim soal, kirim ulang!");
+      console.error("Error adding new question:", error);
       throw error;
     }
   };
 
-  const formatText = (text: string) => {
+  const convertLineBreaksToHtml = (text: string) => {
     return text.replace(/\n/g, "<br>");
   };
 
-  const sendMessagesNewSoal = () => {
+  const broadcastNewQuestionNotification = () => {
     const channelB = supabase.channel(`room-${selectedMatkul}`);
     channelB.subscribe((status) => {
       if (status === "SUBSCRIBED") {
@@ -119,11 +126,11 @@ function App() {
     };
   };
 
-  const scrollToTop = () => {
+  const scrollToTopOfPage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleRequiredField = () => {
+  const validateRequiredFields = () => {
     let hasError = false;
     let message = "";
 
@@ -146,15 +153,38 @@ function App() {
     return true;
   };
 
-  const resetForm = () => {
+  const clearFormFields = () => {
     setQuestion("");
     setSelectedAnswer("");
     setSource("");
   };
 
   useEffect(() => {
-    fetchData();
-  }, [selectedMatkul]);
+    console.log("execc 1");
+
+    if (selectedMatkul !== 0) {
+      loadAnswers();
+    }
+  }, [selectedMatkul, loadAnswers]);
+
+  useEffect(() => {
+    console.log("execc 2");
+    const params = new URLSearchParams(window.location.search);
+    const matkulParam = params.get("matkul_id");
+    if (matkulParam) {
+      const matkulId = parseInt(matkulParam, 10);
+      setSelectedMatkul(matkulId);
+      loadAnswers();
+    }
+  }, [loadAnswers]);
+
+  useEffect(() => {
+    console.log("execc 3");
+
+    if (selectedMatkul !== 0) {
+      loadAnswers();
+    }
+  }, [loadAnswers, selectedMatkul]);
 
   return (
     <>
@@ -175,57 +205,44 @@ function App() {
           </a>
         </p>
       </header>
-      <div className="min-h-screen  bg-dark-gray w-full p-5 sm:p-10 lg:p-5 flex flex-col">
+      <div className="min-h-screen bg-dark-gray w-full p-5 sm:p-10 lg:p-5 flex flex-col">
         <div className="xl:flex lg:gap-5 h-full">
-          <form
-            className="w-full xl:w-1/2 flex flex-col gap-5"
-            onSubmit={handleSubmit}
-          >
-            <div className="p-5 border rounded-md">
-              <MatkulSelect
-                selectedOption={selectedMatkul}
-                setSelectedMatkulName={setSelectedMatkulName}
-                onOptionChange={handleSelectedMatkulChange}
-              />
-            </div>
-            <div className="border rounded-md p-5">
-              <h1 className="text-4xl text-white font-bold mb-5">INPUT SOAL</h1>
-              <div className="mb-6">
-                <label
-                  htmlFor="source"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                >
-                  Sumber / Pengirim{" "}
-                  <span className="text-red-500 font-bold">(OPSIONAL)</span>
-                </label>
-                <input
-                  type="text"
-                  id="source"
-                  value={source}
-                  className="bg-gray-50 border text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="Masukkan sumber, sertakan link jika ada"
-                  onChange={(e) => setSource(e.target.value)}
+          <div className="relative w-full xl:w-1/2 flex flex-col gap-5">
+            {isLoading && (
+              <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="text-white text-xl">
+                  Lagi ngirim soal, bentar yaa...
+                </div>
+              </div>
+            )}
+            <form
+              className={`w-full flex flex-col gap-5 ${
+                isLoading ? "pointer-events-none opacity-50" : ""
+              }`}
+              onSubmit={submitQuestion}
+            >
+              <div className="p-5 border rounded-md">
+                <MatkulSelect
+                  selectedOption={selectedMatkul}
+                  setSelectedMatkulName={setSelectedMatkulName}
+                  onOptionChange={updateSelectedMatkul}
                 />
               </div>
 
-              <Question text={question} onTextChange={handleQuestionChange} />
-              <RadioAnswer
-                selectedOption={selectedAnswer}
-                onOptionChange={handleSelectedAnswerChange}
-              />
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`inline-flex items-center justify-center w-full py-2.5 mt-5 text-lg font-medium text-center text-white ${
-                  isLoading
-                    ? "bg-gray-500 opacity-70"
-                    : "bg-blue-700 hover:bg-blue-800"
-                } rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900`}
-              >
-                {isLoading ? "Loading...." : "Kirim"}
-              </button>
-            </div>
-          </form>
+              <div className="border p-5 rounded-md">
+                <SourceInput
+                  source={source}
+                  onSourceChange={(e) => setSource(e.target.value)}
+                />
+                <Question text={question} onTextChange={updateQuestionText} />
+                <RadioAnswer
+                  selectedOption={selectedAnswer}
+                  onOptionChange={updateSelectedAnswer}
+                />
+                <SubmitButton isLoading={isLoading} />
+              </div>
+            </form>
+          </div>
 
           <div className="w-full xl:w-1/2 flex-1">
             <TableAnswer
@@ -237,7 +254,7 @@ function App() {
           </div>
         </div>
 
-        <FloatingActionButton onClick={scrollToTop} />
+        <FloatingActionButton onClick={scrollToTopOfPage} />
 
         <Analytics />
       </div>
