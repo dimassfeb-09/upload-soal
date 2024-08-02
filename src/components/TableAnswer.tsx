@@ -160,7 +160,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         unsubscribeVote();
       };
     }
-  }, [matkul_id, fetchData, subscribeToNewData]);
+  }, [matkul_id, fetchData, subscribeToNewData, subscribeToVote]);
 
   useEffect(() => {
     fetchVoteCounts();
@@ -213,7 +213,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     try {
       await fetchData();
     } catch (error) {
-      toast.error("Failed to fetch data");
+      console.log("Failed to fetch data");
     } finally {
       toast.success("Ada soal baru nih!");
     }
