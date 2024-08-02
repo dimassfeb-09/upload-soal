@@ -107,6 +107,13 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     [fetchData, fetchVoteCounts]
   );
 
+  useEffect(() => {
+    if (matkul_id !== 0) {
+      fetchData();
+      listeningNewData();
+    }
+  }, [matkul_id]);
+
   const subscribeToNewData = useCallback(() => {
     const channel = supabase.channel(`room-${matkul_id}`);
 
@@ -199,6 +206,17 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     }
   };
 
+  // Fetch data and send a success message
+  const fetchAndSendingMessage = async () => {
+    try {
+      await fetchData();
+    } catch (error) {
+      toast.error("Failed to fetch data");
+    } finally {
+      toast.success("Ada soal baru nih!");
+    }
+  };
+
   const confirmAnswer = (isCorrect: boolean, soalId: number) => {
     Swal.fire({
       title: "CONFIRM?",
@@ -214,6 +232,17 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         handleAnswer(isCorrect, soalId);
       }
     });
+  };
+
+  const listeningNewData = () => {
+    const channel = supabase.channel(`room-${matkul_id}`);
+    channel
+      .on("broadcast", { event: "new-soal" }, () => fetchAndSendingMessage())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   };
 
   const sendMessagesNewVote = (soalId: number) => {
