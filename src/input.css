@@ -7,3 +7,10 @@ input:focus {
     outline: none;
     border: none;
 }
+
+/* In your CSS file or inline styles */
+
+.input-section:focus-within {
+    border-color: rgb(27, 131, 205);
+    border-width: 4px;
+}

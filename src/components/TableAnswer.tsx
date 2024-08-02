@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import supabase from "./../utils/supabase";
 import { toast, Bounce, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
@@ -29,6 +29,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [voteCounts, setVoteCounts] = useState<Record<number, VoteCount>>({});
   const [dataUpdated, setDataUpdated] = useState<boolean>(false);
+  const [timeCloseToast, setTimeCloseToast] = useState<number>(4000);
+
+  const inputSearchRef = useRef<HTMLInputElement>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -162,6 +165,25 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     }
   }, [data]);
 
+  useEffect(() => {
+    const handleKeyCTRLF = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+        event.preventDefault();
+        inputSearchRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyCTRLF);
+    return () => {
+      window.removeEventListener("keydown", handleKeyCTRLF);
+    };
+  }, []);
+
+  const handleSearchActive = () => {
+    setTimeCloseToast(500);
+    toast.info("Pencarian Aktif");
+  };
+
   const handleAnswer = async (isCorrect: boolean, soalId: number) => {
     try {
       const { error } = await supabase
@@ -233,20 +255,22 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         {lastUpdated && `Last Updated: ${lastUpdated}`}
       </div>
 
-      <div className="flex items-center mt-3 pl-2 h-10 border rounded-md w-full bg-white">
+      <div className="input-section group flex items-center mt-3 pl-2 h-10 border-2 rounded-lg w-full bg-white group-focus-within:border-pink-700 group-focus-within:border-4">
         <div className="ml-2">🔍</div>
         <input
           type="text"
-          placeholder="Search here or use CTRL + F"
+          ref={inputSearchRef}
+          placeholder="Cari di sini. Dapat menggunakan CTRL+F atau ⌘+F"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-full ml-5 px-2 border-none focus:border-none"
+          className="w-full h-full ml-2 px-2 border-gray-500 rounded-lg outline-none caret-blue-700"
           aria-label="Search"
+          onFocus={handleSearchActive}
           role="searchbox"
         />
         {searchQuery && (
           <div
-            className="cursor-pointer text-lg pr-2"
+            className="cursor-pointer text-xs pr-2"
             onClick={clearSearchQuery}
           >
             ❌
@@ -362,7 +386,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
       <ToastContainer
         position="top-right"
-        autoClose={5000}
+        autoClose={timeCloseToast}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
