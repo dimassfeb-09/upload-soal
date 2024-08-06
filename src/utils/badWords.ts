@@ -42,7 +42,7 @@ function replaceBadWords(text: string) {
 }
 
 function containsBadWord(text: string) {
-    const pattern = new RegExp(`\\b(${uniqueBadWords.join('|')})\\b`, 'gi');
+    const pattern = new RegExp(`\\b(${uniqueBadWords.join('|')})\\w*`, 'gi');
     const matches = text.match(pattern);
 
     return {
