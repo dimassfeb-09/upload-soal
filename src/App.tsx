@@ -13,6 +13,7 @@ import { AnswerData } from "./types/AnswerData";
 import FloatingActionButton from "./components/FloatingActionButton";
 import SourceInput from "./components/SourceInput";
 import SubmitButton from "./components/SubmitButton";
+import containsBadWord from "./utils/badWords";
 
 function App() {
   const [question, setQuestion] = useState<string>("");
@@ -44,6 +45,12 @@ function App() {
 
     if (!validateRequiredFields()) {
       setIsLoading(false);
+      return;
+    }
+
+    if (containsBadWord(question)) {
+      setIsLoading(false);
+      toast.error("SPAM, JANGAN GUNAKAN KATA-KATA KOTOR. GUNAKAN DENGAN BIJAK, BODOH!");
       return;
     }
 
