@@ -13,6 +13,7 @@ import { AnswerData } from "./types/AnswerData";
 import FloatingActionButton from "./components/FloatingActionButton";
 import SourceInput from "./components/SourceInput";
 import SubmitButton from "./components/SubmitButton";
+import containsBadWord from "./utils/badWords";
 
 function App() {
   const [question, setQuestion] = useState<string>("");
@@ -47,17 +48,10 @@ function App() {
       return;
     }
 
-    // if (containsBadWord(question)) {
-    //   setIsLoading(false);
-    //   Swal.fire({
-    //     title: "JANGAN SPAM!",
-    //     text: "SPAM, JANGAN GUNAKAN KATA-KATA KOTOR. GUNAKAN DENGAN BIJAK, BODOH!",
-    //     icon: "error",
-    //     confirmButtonColor: "#3085d6",
-    //     confirmButtonText: "OK",
-    // });
-    //   return;
-    // }
+    const resultBadWord = containsBadWord(question);
+    if (resultBadWord.contains) {
+        setQuestion(resultBadWord.cleanedText);
+    }
 
     const formattedQuestion = convertLineBreaksToHtml(question);
 

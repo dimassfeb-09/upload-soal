@@ -22,19 +22,31 @@ const bad_words = [
     "goblok", "tolol", "idiot", "jancuk", "jancok", "jayus", "babi", "asu", "anjir",
     "nyet", "brengsek", "brengs*k", "kontol", "memek", "pepek", "ngentot", "colmek",
     "ngocok", "jembut", "bencong", "banci", "homo", "lesbi", "kafir", "dungu", "dodol",
-    "gila", "gembel", "hina", "hina", "hina", "anjing", "bajingan", "brengsek",
-    "brengs*k", "culun", "dodol", "dodok", "gembel", "hina", "hina", "hina", "jahil",
-    "jayus", "kafir", "kampungan", "kasar", "kurang ajar", "lebay", "manja", "mesum",
-    "najis", "najong", "najong", "najong", "nista", "pelit", "pemalas", "pembohong",
-    "pembohong", "pembohong", "penipu", "penipu", "penipu", "pengemis", "pengemis",
-    "pengemis", "perek", "pervert", "sampah", "sarap", "sinting", "sinting", "sinting",
-    "sinting", "sinting", "sinting", "sok tahu", "tembam", "tengik", "terkutuk",
-    "terkutuk", "tolol", "udik", "udik", "udik", "udik"
+    "gila", "gembel", "hina", "jahil", "jayus", "kafir", "kampungan", "kasar",
+    "kurang ajar", "lebay", "manja", "mesum", "najis", "najong", "nista", "pelit",
+    "pemalas", "pembohong", "penipu", "pengemis", "perek", "pervert", "sampah",
+    "sarap", "sok tahu", "tembam", "tengik", "terkutuk"
 ];
 
+const uniqueBadWords = Array.from(new Set(bad_words));
+
+function replaceBadWords(text: string) {
+    let replacedText = text;
+    uniqueBadWords.forEach(word => {
+        const pattern = new RegExp(`\\b${word}\\b`, 'gi');
+        replacedText = replacedText.replace(pattern, '*'.repeat(word.length));
+    });
+    return replacedText;
+}
+
 function containsBadWord(text: string) {
-    const pattern = new RegExp(bad_words.join('|'), 'gi');
-    return pattern.test(text);
+    const pattern = new RegExp(`\\b(${uniqueBadWords.join('|')})\\b`, 'gi');
+    const matches = text.match(pattern);
+    return {
+        contains: !!matches,
+        badWords: matches ? Array.from(new Set(matches.map(word => word.toLowerCase()))) : [],
+        cleanedText: replaceBadWords(text)
+    };
 }
 
 export default containsBadWord;
