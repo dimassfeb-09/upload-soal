@@ -198,7 +198,11 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     const handleKeyCTRLF = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "f") {
         event.preventDefault();
-        inputSearchRef.current?.focus();
+        const input = inputSearchRef.current;
+        if (input) {
+          input.focus();
+          input.setSelectionRange(0, input.value.length);
+        }
       }
     };
 
@@ -206,7 +210,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     return () => {
       window.removeEventListener("keydown", handleKeyCTRLF);
     };
-  }, []);
+  }, [searchQuery]);
 
   const handleSearchActive = () => {
     toast.info("Pencarian Aktif");
