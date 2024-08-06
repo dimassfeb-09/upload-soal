@@ -16,7 +16,20 @@ const bad_words = [
     "pelacur", "pelakor", "peler", "pepek", "puki", "pukima", "pukimae", "pukimak",
     "pukimay", "sampah", "sepong", "sial", "sialan", "silit", "sinting", "sontoloyo",
     "tai", "taik", "tempek", "tempik", "tete", "tetek", "tiembokne", "titit", "toket",
-    "tolol", "ublag", "udik", "wingkeng"
+    "tolol", "ublag", "udik", "wingkeng", "busuk", "jelek", "down", "bego", "bajingan",
+    "brengsek", "brengs*k", "bodoh", "gila", "kampungan", "kasar", "kurang ajar",
+    "anjing", "bangsat", "tai", "sial", "sialan", "kampret", "setan", "iblis",
+    "goblok", "tolol", "idiot", "jancuk", "jancok", "jayus", "babi", "asu", "anjir",
+    "nyet", "brengsek", "brengs*k", "kontol", "memek", "pepek", "ngentot", "colmek",
+    "ngocok", "jembut", "bencong", "banci", "homo", "lesbi", "kafir", "dungu", "dodol",
+    "gila", "gembel", "hina", "hina", "hina", "anjing", "bajingan", "brengsek",
+    "brengs*k", "culun", "dodol", "dodok", "gembel", "hina", "hina", "hina", "jahil",
+    "jayus", "kafir", "kampungan", "kasar", "kurang ajar", "lebay", "manja", "mesum",
+    "najis", "najong", "najong", "najong", "nista", "pelit", "pemalas", "pembohong",
+    "pembohong", "pembohong", "penipu", "penipu", "penipu", "pengemis", "pengemis",
+    "pengemis", "perek", "pervert", "sampah", "sarap", "sinting", "sinting", "sinting",
+    "sinting", "sinting", "sinting", "sok tahu", "tembam", "tengik", "terkutuk",
+    "terkutuk", "tolol", "udik", "udik", "udik", "udik"
 ];
 
 function containsBadWord(text: string) {
