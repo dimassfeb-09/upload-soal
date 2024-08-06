@@ -33,8 +33,10 @@ const uniqueBadWords = Array.from(new Set(bad_words.map(word => word.toLowerCase
 function replaceBadWords(text: string) {
     let replacedText = text;
     uniqueBadWords.forEach(word => {
-        const pattern = new RegExp(`\\b${word}\\b`, 'gi');
-        replacedText = replacedText.replace(pattern, '*'.repeat(word.length));
+        const pattern = new RegExp(`\\b${word}\\w*`, 'gi');
+        replacedText = replacedText.replace(pattern, match => {
+            return match.slice(0, word.length) + '*'.repeat(match.length - word.length);
+        });
     });
     return replacedText;
 }

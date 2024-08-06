@@ -13,7 +13,6 @@ import { AnswerData } from "./types/AnswerData";
 import FloatingActionButton from "./components/FloatingActionButton";
 import SourceInput from "./components/SourceInput";
 import SubmitButton from "./components/SubmitButton";
-import containsBadWord from "./utils/badWords";
 
 function App() {
   const [question, setQuestion] = useState<string>("");
