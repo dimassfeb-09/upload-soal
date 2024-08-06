@@ -28,7 +28,7 @@ const bad_words = [
     "sarap", "sok tahu", "tembam", "tengik", "terkutuk"
 ];
 
-const uniqueBadWords = Array.from(new Set(bad_words));
+const uniqueBadWords = Array.from(new Set(bad_words.map(word => word.toLowerCase())));
 
 function replaceBadWords(text: string) {
     let replacedText = text;
@@ -42,6 +42,7 @@ function replaceBadWords(text: string) {
 function containsBadWord(text: string) {
     const pattern = new RegExp(`\\b(${uniqueBadWords.join('|')})\\b`, 'gi');
     const matches = text.match(pattern);
+
     return {
         contains: !!matches,
         badWords: matches ? Array.from(new Set(matches.map(word => word.toLowerCase()))) : [],

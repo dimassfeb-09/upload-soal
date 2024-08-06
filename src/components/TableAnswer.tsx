@@ -6,6 +6,7 @@ import { AnswerData } from "../types/AnswerData";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import BarCorrectChart from "./BarCorrectChart";
 import Swal from "sweetalert2";
+import containsBadWord from "../utils/badWords";
 
 interface TableAnswerProps {
   data: AnswerData[];
@@ -345,22 +346,35 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                       </div>
                     </td>
 
-                    <td
-                      scope="row"
-                      className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600"
-                    >
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: item.question || "",
-                        }}
-                      />
-                      {item.source && (
-                        <div className="mt-5">
-                          Source:{" "}
-                          <span className="text-blue-400">{item.source}</span>
-                        </div>
-                      )}
-                    </td>
+                    <td scope="row" className="pl-5 py-5 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                            {(() => {
+                              const result = containsBadWord(item.question);
+                              return (
+                                <>
+                                  <div
+                                    className="mt-5"
+                                    dangerouslySetInnerHTML={{
+                                      __html: result.cleanedText || "",
+                                    }}
+                                  />
+
+                                  {item.source && (
+                                    <div className="mt-5">
+                                      Source:{" "}
+                                      <span className="text-blue-400">{item.source}</span>
+                                    </div>
+                                  )}
+
+                                  {result.contains && (
+                                    <div className="border w-min border-red-500 px-2 py-1 rounded-sm text-xs mt-5">
+                                      Mengandung kata kotor
+                                    </div>
+                                  )}
+
+                                </>
+                              );
+                            })()}
+                          </td>
                   </tr>
                 ))
               )}

@@ -38,41 +38,32 @@ function App() {
     setSelectedMatkulName(e.target.options[e.target.selectedIndex].text);
     setData([]);
   };
-
   const submitQuestion = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
     if (!validateRequiredFields()) {
-      setIsLoading(false);
-      return;
-    }
-
-    const resultBadWord = containsBadWord(question);
-    if (resultBadWord.contains) {
-        setQuestion(resultBadWord.cleanedText);
+        setIsLoading(false);
+        return;
     }
 
     const formattedQuestion = convertLineBreaksToHtml(question);
 
     try {
-      await addNewQuestion(formattedQuestion, selectedAnswer, selectedMatkul);
-      clearFormFields();
-      toast.success("Berhasil tambah soal baru!");
+        await addNewQuestion(formattedQuestion, selectedAnswer, selectedMatkul, source);
+        clearFormFields();
+        toast.success("Berhasil tambah soal baru!");
     } catch (error) {
-      toast.error("Gagal kirim soal, kirim ulang!");
-      setIsLoading(false);
+        toast.error("Gagal kirim soal, kirim ulang!");
     } finally {
-      await loadAnswers();
-      scrollToTopOfPage();
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
+        await loadAnswers();
+        scrollToTopOfPage();
+        setIsLoading(false); 
     }
-  };
+};
+
 
   const loadAnswers = useCallback(async () => {
-    console.log("hahahahahahha");
     try {
       const { data: fetchedData, error } = await supabase
         .from("soal")
