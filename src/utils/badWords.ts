@@ -35,7 +35,7 @@ function replaceBadWords(text: string) {
     uniqueBadWords.forEach(word => {
         const pattern = new RegExp(`\\b${word}\\w*`, 'gi');
         replacedText = replacedText.replace(pattern, match => {
-            return match.slice(0, word.length) + '*'.repeat(match.length - word.length);
+            return '*'.repeat(match.length);
         });
     });
     return replacedText;
