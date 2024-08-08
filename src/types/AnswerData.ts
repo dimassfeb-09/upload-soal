@@ -7,4 +7,5 @@ export type AnswerData = {
     correct_counts: number,
     incorrect_counts: number;
     created_at: string;
+    option: string[];
 }

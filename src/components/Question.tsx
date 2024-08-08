@@ -15,7 +15,7 @@ const Question: React.FC<QuestionProps> = ({ text, onTextChange }) => {
         <div className="bg-white rounded-b-lg dark:bg-gray-700 rounded-md">
           <textarea
             id="editor"
-            rows={8}
+            rows={4}
             className="rounded-md p-5 block w-full text-sm text-gray-800 bg-white border dark:bg-gray-700 focus:ring-0 dark:text-white dark:placeholder-gray-400"
             placeholder="Paste di sini soalnya"
             value={text}

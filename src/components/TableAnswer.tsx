@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import supabase from "./../utils/supabase";
 import { toast, Bounce, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"; // Importing toastify css
+import "react-toastify/dist/ReactToastify.css";
 import { AnswerData } from "../types/AnswerData";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import BarCorrectChart from "./BarCorrectChart";
@@ -47,7 +47,8 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
       setLastUpdated(new Date().toLocaleString());
       setDataUpdated(true);
     } catch (error) {
-      console.log("Failed to fetch data");
+      console.error("Failed to fetch data", error);
+      toast.error("Failed to fetch data");
     }
   }, [matkul_id, setData]);
 
@@ -58,7 +59,8 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         toast.success(message);
         setDataUpdated(false);
       } catch (error) {
-        console.log("Failed to fetch data");
+        console.error("Failed to fetch data", error);
+        toast.error("Failed to fetch data");
       }
     },
     [fetchAnswers]
@@ -84,7 +86,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     channel
       .on("broadcast", { event: "new-vote" }, (payload) => {
         toast.info(payload.message);
-        fetchAnswers(); // Optionally, refetch answers to update UI
+        fetchAnswers();
       })
       .subscribe();
 
@@ -133,7 +135,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
       if (updateError) throw updateError;
     } catch (error) {
-      console.error(error);
+      console.error("Failed to record answer", error);
       toast.error("Failed to record answer");
     } finally {
       broadcastNewVoteNotification();
@@ -314,18 +316,22 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                         </div>
 
                         <BarCorrectChart
-                          correctCount={item.correct_counts}
-                          incorrectCount={item.incorrect_counts}
+                          correctCount={item.correct_counts || 0}
+                          incorrectCount={item.incorrect_counts || 0}
                         />
                       </div>
 
                       <div className="mt-3">
-                        {new Date(item.created_at).toLocaleString()}
+                        {item.created_at
+                          ? new Date(item.created_at).toLocaleString()
+                          : "Date not available"}
                       </div>
                     </td>
 
                     <td className="px-6 py-4 text-4xl font-bold text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
-                      <div className="text-center">{item.answer}</div>
+                      <div className="text-center">
+                        {item.answer || "No answer"}
+                      </div>
                       <hr className="mt-5" />
                       <div className="flex flex-col justify-center items-center text-sm mt-2">
                         <div>Vote</div>
@@ -346,9 +352,12 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                       </div>
                     </td>
 
-                    <td scope="row" className="pl-5 py-5 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                    <td
+                      scope="row"
+                      className="pl-5 py-5 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600"
+                    >
                       {(() => {
-                        const result = containsBadWord(item.question);
+                        const result = containsBadWord(item.question || "");
                         return (
                           <>
                             <div
@@ -358,9 +367,34 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                               }}
                             />
 
+                            <ul className="mt-5 flex flex-col gap-3 ">
+                              {item.option && item.option.length > 0
+                                ? item.option.map((v, index) => {
+                                    const label = String.fromCharCode(
+                                      65 + index
+                                    );
+                                    return (
+                                      <li
+                                        className={
+                                          item.answer == label
+                                            ? "bg-blue-600 w-min"
+                                            : ""
+                                        }
+                                        key={index}
+                                      >
+                                        {label}. {v}
+                                      </li>
+                                    );
+                                  })
+                                : null}
+                            </ul>
+
                             {item.source && (
                               <div className="mt-5">
-                                Source: <span className="text-blue-400">{item.source}</span>
+                                Source:{" "}
+                                <span className="text-blue-400">
+                                  {item.source}
+                                </span>
                               </div>
                             )}
                           </>

@@ -44,7 +44,7 @@ const MatkulSelect: React.FC<MatkulSelectProps> = ({
     );
     if (selectedMatkul) {
       setSelectedMatkulName(selectedMatkul.name);
-      navigate(`?matkul_id=${selectedOption}`); // Update the URL with selected matkul_id
+      navigate(`?matkul_id=${selectedOption}`);
     }
   }, [selectedOption, matkulOptions, setSelectedMatkulName, navigate]);
 

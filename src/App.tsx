@@ -13,15 +13,39 @@ import { AnswerData } from "./types/AnswerData";
 import FloatingActionButton from "./components/FloatingActionButton";
 import SourceInput from "./components/SourceInput";
 import SubmitButton from "./components/SubmitButton";
+import { NewsItem } from "./types/NewsItem";
+import OptionQuestion from "./components/OptionQuestion";
 
 function App() {
-  const [question, setQuestion] = useState<string>("");
   const [data, setData] = useState<AnswerData[]>([]);
+  const [question, setQuestion] = useState<string>("");
+  const [option, setOption] = useState<string[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [selectedMatkul, setSelectedMatkul] = useState<number>(0);
   const [source, setSource] = useState<string>("");
   const [selectedMatkulName, setSelectedMatkulName] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [news, setNews] = useState<NewsItem[]>([]);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("news")
+          .select("id, text, created_at");
+
+        if (error) {
+          throw error;
+        }
+
+        setNews(data || []);
+      } catch (error) {
+        console.error("Error fetching news:", error);
+      }
+    };
+
+    fetchNews();
+  }, []);
 
   const updateQuestionText = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setQuestion(e.target.value);
@@ -37,30 +61,35 @@ function App() {
     setSelectedMatkulName(e.target.options[e.target.selectedIndex].text);
     setData([]);
   };
+
   const submitQuestion = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
     if (!validateRequiredFields()) {
-        setIsLoading(false);
-        return;
+      setIsLoading(false);
+      return;
     }
 
     const formattedQuestion = convertLineBreaksToHtml(question);
 
     try {
-        await addNewQuestion(formattedQuestion, selectedAnswer, selectedMatkul, source);
-        clearFormFields();
-        toast.success("Berhasil tambah soal baru!");
+      await addNewQuestion(
+        formattedQuestion,
+        selectedAnswer,
+        selectedMatkul,
+        source
+      );
+      clearFormFields();
+      toast.success("Berhasil tambah soal baru!");
     } catch (error) {
-        toast.error("Gagal kirim soal, kirim ulang!");
+      toast.error("Gagal kirim soal, kirim ulang!");
     } finally {
-        await loadAnswers();
-        scrollToTopOfPage();
-        setIsLoading(false); 
+      await loadAnswers();
+      scrollToTopOfPage();
+      setIsLoading(false);
     }
-};
-
+  };
 
   const loadAnswers = useCallback(async () => {
     try {
@@ -90,7 +119,7 @@ function App() {
     try {
       const { error } = await supabase
         .from("soal")
-        .insert([{ question, answer, matkul_id, source }]);
+        .insert([{ question, answer, matkul_id, source, option }]);
 
       if (error) throw error;
 
@@ -136,6 +165,11 @@ function App() {
     } else if (question === "") {
       message = "Soal tidak boleh kosong";
       hasError = true;
+    } else if (option.length < 4) {
+      message = `Anda baru memasukkan ${option.length} opsi. Masukkan ${
+        4 - option.length
+      } lagi.`;
+      hasError = true;
     } else if (selectedAnswer === "") {
       message = "Pilih salah satu jawaban yang benar";
       hasError = true;
@@ -149,22 +183,24 @@ function App() {
     return true;
   };
 
+  const clearOption = () => {
+    setOption([]);
+  };
+
   const clearFormFields = () => {
     setQuestion("");
     setSelectedAnswer("");
     setSource("");
+    setOption([]);
   };
 
   useEffect(() => {
-    console.log("execc 1");
-
     if (selectedMatkul !== 0) {
       loadAnswers();
     }
   }, [selectedMatkul, loadAnswers]);
 
   useEffect(() => {
-    console.log("execc 2");
     const params = new URLSearchParams(window.location.search);
     const matkulParam = params.get("matkul_id");
     if (matkulParam) {
@@ -174,34 +210,18 @@ function App() {
     }
   }, [loadAnswers]);
 
-  useEffect(() => {
-    console.log("execc 3");
-
-    if (selectedMatkul !== 0) {
-      loadAnswers();
-    }
-  }, [loadAnswers, selectedMatkul]);
-
   return (
     <>
-      <header className="w-full bg-dark-gray p-3">
-        <h1 className="text-3xl font-bold text-white">
-          DARI PADA CEK GAMBAR SATU-SATU MENDING COPY PASTE SINI SOAL-NYA
-        </h1>
-
-        <p className="text-orange-500 font-bold">
-          Download Extention Absolute Enable Right Click & Copy dulu{" "}
-          <a
-            className="text-blue-500 underline"
-            target="_blank"
-            rel="noopener noreferrer"
-            href="https://chromewebstore.google.com/detail/absolute-enable-right-cli/jdocbkpgdakpekjlhemmfcncgdjeiika?hl=en"
-          >
-            di sini
-          </a>
-        </p>
-      </header>
       <div className="min-h-screen bg-dark-gray w-full p-5 sm:p-10 lg:p-5 flex flex-col">
+        {news.map((item) => (
+          <div
+            key={item.id}
+            className="w-full px-5 py-3 bg-[#fff3cd] mb-5 rounded-md"
+          >
+            ❗{item.text}
+          </div>
+        ))}
+
         <div className="xl:flex lg:gap-5 h-full">
           <div className="relative w-full xl:w-1/2 flex flex-col gap-5">
             {isLoading && (
@@ -231,10 +251,19 @@ function App() {
                   onSourceChange={(e) => setSource(e.target.value)}
                 />
                 <Question text={question} onTextChange={updateQuestionText} />
+
+                <OptionQuestion
+                  text={option.join("\n")}
+                  onTextChange={(lines) => setOption(lines)}
+                  onClear={clearOption}
+                />
+
                 <RadioAnswer
+                  optionQuestion={option}
                   selectedOption={selectedAnswer}
                   onOptionChange={updateSelectedAnswer}
                 />
+
                 <SubmitButton isLoading={isLoading} />
               </div>
             </form>
