@@ -9,7 +9,7 @@ const Question: React.FC<QuestionProps> = ({ text, onTextChange }) => {
   return (
     <div className="mt-5 text-sm text-white">
       <label htmlFor="editor" className="font-bold">
-        Soal beserta Opsinya (ABCD)
+        Soal
       </label>
       <div className="w-full mb-4 mt-2 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
         <div className="bg-white rounded-b-lg dark:bg-gray-700 rounded-md">
