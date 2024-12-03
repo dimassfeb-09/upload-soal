@@ -26,7 +26,8 @@ const MatkulSelect: React.FC<MatkulSelectProps> = ({
       try {
         const { data: matkulData, error } = await supabase
           .from("matkul")
-          .select("id, name");
+          .select("id, name")
+          .eq("is_visible", true);
 
         if (error) throw error;
         setMatkulOptions(matkulData || []);

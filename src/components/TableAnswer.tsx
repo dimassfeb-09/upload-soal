@@ -84,7 +84,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     const channel = supabase.channel(`vote-room-${matkul_id}`);
 
     channel
-      .on("broadcast", { event: "new-vote" }, (payload) => {
+      .on("broadcast", { event: "new-vote" }, (payload: any) => {
         toast.info(payload.message);
         fetchAnswers();
       })
@@ -102,7 +102,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         event: "new-vote",
         payload: { message: "Ada vote baru nih!" },
       })
-      .catch((error) => console.error("Failed to broadcast vote:", error));
+      .catch((error: any) => console.error("Failed to broadcast vote:", error));
   }, [matkul_id]);
 
   const handleVoteAnswer = async (isCorrect: boolean, soalId: number) => {
@@ -229,19 +229,19 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   );
 
   return (
-    <div className="mt-5 xl:mt-0 border rounded-md p-5 h-full flex flex-col">
+    <div className="flex flex-col h-full p-5 mt-5 border rounded-md xl:mt-0">
       <div className="text-3xl font-bold text-white">
         Real-Time Jawaban <span className="text-orange-500">{matkul_name}</span>
-        <div className="font-bold text-lg mt-2">
+        <div className="mt-2 text-lg font-bold">
           Data otomatis update ketika terdapat data baru.
         </div>
       </div>
 
-      <div className="text-white font-bold mt-3">
+      <div className="mt-3 font-bold text-white">
         {lastUpdated && `Last Updated: ${lastUpdated}`}
       </div>
 
-      <div className="input-section group flex items-center mt-3 pl-2 h-10 border-2 rounded-lg w-full bg-white group-focus-within:border-pink-700 group-focus-within:border-4">
+      <div className="flex items-center w-full h-10 pl-2 mt-3 bg-white border-2 rounded-lg input-section group group-focus-within:border-pink-700 group-focus-within:border-4">
         <div className="ml-2">🔍</div>
         <input
           type="text"
@@ -249,14 +249,14 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
           placeholder="Cari di sini. Dapat menggunakan CTRL+F atau ⌘+F"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-full ml-2 px-2 border-gray-500 rounded-lg outline-none caret-blue-700"
+          className="w-full h-full px-2 ml-2 border-gray-500 rounded-lg outline-none caret-blue-700"
           aria-label="Search"
           onFocus={handleSearchActive}
           role="searchbox"
         />
         {searchQuery && (
           <div
-            className="cursor-pointer text-xs pr-2"
+            className="pr-2 text-xs cursor-pointer"
             onClick={() => setSearchQuery("")}
           >
             ❌
@@ -266,8 +266,8 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
       <div className="flex-1 mt-5 overflow-x-auto overflow-y-auto hide-scrollbar">
         <div className="xl:h-[1em]">
-          <table className="relative w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
-            <thead className="sticky top-0 text-xs text-gray-700 uppercase bg-dark-gray dark:bg-dark-gray dark:text-gray-400 border-b border-gray-300 dark:border-gray-600 z-10">
+          <table className="relative w-full text-sm text-left text-gray-500 border border-gray-300 rtl:text-right dark:text-gray-400 dark:border-gray-600">
+            <thead className="sticky top-0 z-10 text-xs text-gray-700 uppercase border-b border-gray-300 bg-dark-gray dark:bg-dark-gray dark:text-gray-400 dark:border-gray-600">
               <tr>
                 <th
                   scope="col"
@@ -309,9 +309,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                         : "bg-white dark:bg-gray-800"
                     }`}
                   >
-                    <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                    <td className="px-6 py-4 font-medium text-gray-900 border-r border-gray-300 whitespace-nowrap dark:text-white dark:border-gray-600">
                       <div className="flex flex-col">
-                        <div className="bg-blue-600 p-2 w-min h-min rounded-full text-xs text-white flex items-center justify-center">
+                        <div className="flex items-center justify-center p-2 text-xs text-white bg-blue-600 rounded-full w-min h-min">
                           ID-{item.id}
                         </div>
 
@@ -328,22 +328,22 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-4xl font-bold text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600">
+                    <td className="px-6 py-4 text-4xl font-bold text-gray-900 border-r border-gray-300 whitespace-nowrap dark:text-white dark:border-gray-600">
                       <div className="text-center">
                         {item.answer || "No answer"}
                       </div>
                       <hr className="mt-5" />
-                      <div className="flex flex-col justify-center items-center text-sm mt-2">
+                      <div className="flex flex-col items-center justify-center mt-2 text-sm">
                         <div>Vote</div>
                         <div className="flex gap-3 mt-2">
                           <button
-                            className="bg-teal-500 px-2 py-1 hover:bg-teal-700 border rounded-sm"
+                            className="px-2 py-1 bg-teal-500 border rounded-sm hover:bg-teal-700"
                             onClick={() => confirmVoteAnswer(true, item.id)}
                           >
                             Benar
                           </button>
                           <button
-                            className="bg-red-500 hover:opacity-50 px-2 py-1 hover:bg-red-700 border rounded-sm"
+                            className="px-2 py-1 bg-red-500 border rounded-sm hover:opacity-50 hover:bg-red-700"
                             onClick={() => confirmVoteAnswer(false, item.id)}
                           >
                             Salah
@@ -354,7 +354,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
                     <td
                       scope="row"
-                      className="pl-5 py-5 font-medium text-gray-900 whitespace-nowrap dark:text-white border-r border-gray-300 dark:border-gray-600"
+                      className="py-5 pl-5 font-medium text-gray-900 border-r border-gray-300 whitespace-nowrap dark:text-white dark:border-gray-600"
                     >
                       {(() => {
                         const result = containsBadWord(item.question || "");
@@ -367,7 +367,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                               }}
                             />
 
-                            <ul className="mt-5 flex flex-col gap-3 ">
+                            <ul className="flex flex-col gap-3 mt-5 ">
                               {item.option && item.option.length > 0
                                 ? item.option.map((v, index) => {
                                     const label = String.fromCharCode(
