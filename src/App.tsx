@@ -160,7 +160,6 @@ function App() {
   };
 
   useEffect(() => {
-    console.log("execc 1");
 
     if (selectedMatkul !== 0) {
       loadAnswers();
@@ -168,7 +167,6 @@ function App() {
   }, [selectedMatkul, loadAnswers]);
 
   useEffect(() => {
-    console.log("execc 2");
     const params = new URLSearchParams(window.location.search);
     const matkulParam = params.get("matkul_id");
     if (matkulParam) {
@@ -179,7 +177,6 @@ function App() {
   }, [loadAnswers]);
 
   useEffect(() => {
-    console.log("execc 3");
 
     if (selectedMatkul !== 0) {
       loadAnswers();

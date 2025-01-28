@@ -7,6 +7,8 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 import BarCorrectChart from "./BarCorrectChart";
 import Swal from "sweetalert2";
 import containsBadWord from "../utils/badWords";
+import axios from "axios";
+import DialogAIGroq from "./DialogAIGroq";
 
 interface TableAnswerProps {
   data: AnswerData[];
@@ -33,6 +35,10 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   const inputSearchRef = useRef<HTMLInputElement>(null);
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
   const voteChannelRef = useRef<RealtimeChannel | null>(null);
+
+  const [responseAIGroq, setResponseAIGroq] = useState<string>("");
+  const [isDialogAIGroqOpen, setIsDialogAIGroqOpen] = useState<boolean>(false);
+  const [loadingAskGroq, setLoadingAskGroq] = useState<boolean>(false);
 
   const fetchAnswers = useCallback(async () => {
     try {
@@ -219,6 +225,60 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     toast.info("Pencarian Aktif");
   };
 
+  const askGroq = async (message: string, option: string): Promise<string> => {
+    const url = "https://api.groq.com/openai/v1/chat/completions";
+    try {
+      const response = await axios.post(
+        url,
+        {
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "user",
+              content: `Saya ingin bertanya terkait ${message}. Apakah benar, bahwa jawabannya yang benar adalah ${option}? berikan saya penjelasan secara singkat. Jika salah, maka berikan jawaban mana yang benar.`,
+            },
+          ],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_GROQ}`,
+            "Content-Type": "application/json",
+          }
+        }
+      );
+
+      const content = response.data.choices[0].message.content
+      const formattedMessage = content.replace(/\n/g, "<br />");
+      return formattedMessage;
+    } catch (e) {
+      toast.error("Gagal mendapatkan jawaban AI");
+      return "Gagal mendapatkan jawaban AI";
+    }
+  };
+
+  const handleDialogToggle = (isVisible: boolean) => {
+    setIsDialogAIGroqOpen(isVisible);
+  };
+  
+  const handleAskAI = async (message: string, option: string): Promise<void> => {
+    try {
+      setLoadingAskGroq(true);
+      const responseMessage = await askGroq(message, option);
+      if (responseMessage) {
+        setResponseAIGroq(responseMessage);
+        setIsDialogAIGroqOpen(true);  
+      } else {
+        toast.error("AI response is empty or failed to retrieve.");
+      }
+    } catch (error) {
+      console.error("Error while fetching AI response:", error);
+      toast.error("An error occurred while fetching the response.");
+    } finally {
+      setLoadingAskGroq(false);
+    }
+  };
+  
+
   const filteredData = data.filter(
     (item) =>
       (item.question?.toLowerCase() || "").includes(
@@ -267,7 +327,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
       <div className="flex-1 mt-5 overflow-x-auto overflow-y-auto hide-scrollbar">
         <div className="xl:h-[1em]">
           <table className="relative w-full text-sm text-left text-gray-500 border border-gray-300 rtl:text-right dark:text-gray-400 dark:border-gray-600">
-            <thead className="sticky top-0 z-10 text-xs text-gray-700 uppercase border-b border-gray-300 bg-dark-gray dark:bg-dark-gray dark:text-gray-400 dark:border-gray-600">
+            <thead className=" top-0 z-10 text-xs text-gray-700 uppercase border-b border-gray-300 bg-dark-gray dark:bg-dark-gray dark:text-gray-400 dark:border-gray-600">
               <tr>
                 <th
                   scope="col"
@@ -319,6 +379,21 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                           correctCount={item.correct_counts || 0}
                           incorrectCount={item.incorrect_counts || 0}
                         />
+
+                        <div 
+                          onClick={() => !loadingAskGroq && handleAskAI(item.question, item.answer)} 
+                          className={`mt-4 w-min px-3 py-1 rounded-full cursor-pointer text-white text-sm ${
+                            loadingAskGroq ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500'
+                          }`}>
+                          {loadingAskGroq ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-4 h-4 border-4 border-t-4 border-white rounded-full animate-spin"></div>
+                              <span>Loading...</span>
+                            </div>
+                          ) : (
+                            "Tanya AI 💬"
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-3">
@@ -422,6 +497,13 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         theme="light"
         transition={Bounce}
       />
+
+      {isDialogAIGroqOpen && 
+        <DialogAIGroq 
+          message={responseAIGroq} 
+          handleDialog={handleDialogToggle} 
+        />
+      }
     </div>
   );
 };
