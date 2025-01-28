@@ -241,7 +241,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         },
         {
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_GROQ}`,
+            "Authorization": `Bearer ${import.meta.env.VITE_GROQ}`,
             "Content-Type": "application/json",
           }
         }
