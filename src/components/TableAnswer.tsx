@@ -227,6 +227,8 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
   const askGroq = async (message: string, option: string): Promise<string> => {
     const url = "https://api.groq.com/openai/v1/chat/completions";
+    const apiKey = import.meta.env.VITE_GROQ;
+
     try {
       const response = await axios.post(
         url,
@@ -241,7 +243,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         },
         {
           headers: {
-            "Authorization": `Bearer ${import.meta.env.VITE_GROQ}`,
+            "Authorization": `Bearer ${apiKey}`,
             "Content-Type": "application/json",
           }
         }
