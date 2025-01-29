@@ -1,19 +1,36 @@
 type DialogAIGroqProps = {
   message: string;
-  handleDialog: (isVisible: boolean) => void;  
+  handleDialog: (isVisible: boolean) => void;
 };
 
-export default function DialogAIGroq({ message, handleDialog }: DialogAIGroqProps) {
+export default function DialogAIGroq({
+  message,
+  handleDialog,
+}: DialogAIGroqProps) {
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-        <p className="mb-4" dangerouslySetInnerHTML={{ __html: message }} />
+    <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 px-[100px] py-[100px]">
+      <div className="bg-white p-6 rounded-lg shadow-2xl w-full h-full max-w-5xl max-h-full relative flex flex-col">
+        {/* Close Button */}
+        <button
+          onClick={() => handleDialog(false)}
+          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
 
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <p
+            className="text-gray-700 text-lg text-center"
+            dangerouslySetInnerHTML={{ __html: message }}
+          />
+        </div>
 
-        <div className="flex justify-end space-x-4">
+        {/* Action Button */}
+        <div className="flex justify-center mt-4 pb-4">
           <button
-            onClick={() => handleDialog(false)} // Close dialog on button click
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            onClick={() => handleDialog(false)}
+            className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-all duration-300"
           >
             Oke
           </button>

@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 import containsBadWord from "../utils/badWords";
 import axios from "axios";
 import DialogAIGroq from "./DialogAIGroq";
+import { ModelsGroq } from "../types/ModelsGroq";
 
 interface TableAnswerProps {
   data: AnswerData[];
@@ -36,6 +37,10 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
   const voteChannelRef = useRef<RealtimeChannel | null>(null);
 
+  const [optionModelsGroq, setOptionModelsGroq] = useState<ModelsGroq[]>([]);
+  const [selectedModels, setSelectedModels] = useState<string>(
+    "llama-3.3-70b-versatile"
+  );
   const [responseAIGroq, setResponseAIGroq] = useState<string>("");
   const [isDialogAIGroqOpen, setIsDialogAIGroqOpen] = useState<boolean>(false);
   const [loadingAskGroq, setLoadingAskGroq] = useState<boolean>(false);
@@ -221,6 +226,27 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
     };
   }, [searchQuery]);
 
+  useEffect(() => {
+    const fetchModelsGroq = async () => {
+      const url = "https://api.groq.com/openai/v1/models";
+      const apiKey = import.meta.env.VITE_GROQ;
+
+      try {
+        const response = await axios.get(url, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        });
+        setOptionModelsGroq(response.data.data);
+      } catch (e) {
+        toast.error("Gagal mendapatkan models");
+      }
+    };
+
+    fetchModelsGroq();
+  }, []);
+
   const handleSearchActive = () => {
     toast.info("Pencarian Aktif");
   };
@@ -233,7 +259,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
       const response = await axios.post(
         url,
         {
-          model: "llama-3.3-70b-versatile",
+          model: selectedModels,
           messages: [
             {
               role: "user",
@@ -243,14 +269,16 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         },
         {
           headers: {
-            "Authorization": `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
-          }
+          },
         }
       );
 
-      const content = response.data.choices[0].message.content
-      const formattedMessage = content.replace(/\n/g, "<br />");
+      const content = response.data.choices[0].message.content;
+      const formattedMessage = content
+        .replace(/\n/g, "<br />")
+        .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
       return formattedMessage;
     } catch (e) {
       toast.error("Gagal mendapatkan jawaban AI");
@@ -261,14 +289,17 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   const handleDialogToggle = (isVisible: boolean) => {
     setIsDialogAIGroqOpen(isVisible);
   };
-  
-  const handleAskAI = async (message: string, option: string): Promise<void> => {
+
+  const handleAskAI = async (
+    message: string,
+    option: string
+  ): Promise<void> => {
     try {
       setLoadingAskGroq(true);
       const responseMessage = await askGroq(message, option);
       if (responseMessage) {
         setResponseAIGroq(responseMessage);
-        setIsDialogAIGroqOpen(true);  
+        setIsDialogAIGroqOpen(true);
       } else {
         toast.error("AI response is empty or failed to retrieve.");
       }
@@ -279,7 +310,6 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
       setLoadingAskGroq(false);
     }
   };
-  
 
   const filteredData = data.filter(
     (item) =>
@@ -297,10 +327,24 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         <div className="mt-2 text-lg font-bold">
           Data otomatis update ketika terdapat data baru.
         </div>
+        <div className="mt-3 font-bold text-white text-sm">
+          {lastUpdated && `Last Updated: ${lastUpdated}`}
+        </div>
       </div>
-
-      <div className="mt-3 font-bold text-white">
-        {lastUpdated && `Last Updated: ${lastUpdated}`}
+      <hr className="mt-3" />
+      <div className="flex  mt-4 flex flex-col gap-2 text-white">
+        <label htmlFor="model">Pilih Model AI</label>
+        <select
+          onChange={(e) => setSelectedModels(e.target.value)}
+          value={selectedModels}
+          className="px-4 py-2 rounded-lg border bg-white text-gray-700 border-gray-300 hover:bg-gray-100 transition-all duration-300"
+        >
+          {optionModelsGroq.map((option, index) => (
+            <option key={index} value={option.id}>
+              {option.id} by {option.owned_by}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex items-center w-full h-10 pl-2 mt-3 bg-white border-2 rounded-lg input-section group group-focus-within:border-pink-700 group-focus-within:border-4">
@@ -382,11 +426,17 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                           incorrectCount={item.incorrect_counts || 0}
                         />
 
-                        <div 
-                          onClick={() => !loadingAskGroq && handleAskAI(item.question, item.answer)} 
+                        <div
+                          onClick={() =>
+                            !loadingAskGroq &&
+                            handleAskAI(item.question, item.answer)
+                          }
                           className={`mt-4 w-min px-3 py-1 rounded-full cursor-pointer text-white text-sm ${
-                            loadingAskGroq ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500'
-                          }`}>
+                            loadingAskGroq
+                              ? "bg-blue-300 cursor-not-allowed"
+                              : "bg-blue-500"
+                          }`}
+                        >
                           {loadingAskGroq ? (
                             <div className="flex items-center space-x-2">
                               <div className="w-4 h-4 border-4 border-t-4 border-white rounded-full animate-spin"></div>
@@ -500,12 +550,12 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         transition={Bounce}
       />
 
-      {isDialogAIGroqOpen && 
-        <DialogAIGroq 
-          message={responseAIGroq} 
-          handleDialog={handleDialogToggle} 
+      {isDialogAIGroqOpen && (
+        <DialogAIGroq
+          message={responseAIGroq}
+          handleDialog={handleDialogToggle}
         />
-      }
+      )}
     </div>
   );
 };
