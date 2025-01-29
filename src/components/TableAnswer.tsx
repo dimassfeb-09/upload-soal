@@ -238,7 +238,10 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
             "Content-Type": "application/json",
           },
         });
-        setOptionModelsGroq(response.data.data);
+        const activeModels = response.data.data.filter(
+          (model: ModelsGroq) => model.active != false
+        );
+        setOptionModelsGroq(activeModels);
       } catch (e) {
         toast.error("Gagal mendapatkan models");
       }
