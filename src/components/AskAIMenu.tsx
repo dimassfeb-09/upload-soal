@@ -43,6 +43,12 @@ const AskAIMenu = () => {
     askGroq(input);
   };
 
+  const handleKeyPress = (event: any) => {
+    if (event.key === "Enter") {
+      handleSendMessage();
+    }
+  };
+
   const askGroq = async (message: string): Promise<void> => {
     const url = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -249,6 +255,7 @@ const AskAIMenu = () => {
           <div className="flex mt-4">
             <textarea
               value={input}
+              onKeyPress={handleKeyPress} // Detect Enter key press
               onChange={(e) => setInput(e.target.value)}
               className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Type your message..."
