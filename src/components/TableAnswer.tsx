@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import supabase from "./../utils/supabase";
-import { toast, Bounce, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AnswerData } from "../types/AnswerData";
 import { RealtimeChannel } from "@supabase/supabase-js";
@@ -538,20 +538,6 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
           </table>
         </div>
       </div>
-
-      <ToastContainer
-        position="top-right"
-        autoClose={500}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
 
       {isDialogAIGroqOpen && (
         <DialogAIGroq

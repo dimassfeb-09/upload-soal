@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import "./output.css";
 import "./input.css";
 import Question from "./components/Question";
-import { toast } from "react-toastify";
+import { toast, ToastContainer, Bounce } from "react-toastify";
 import { Analytics } from "@vercel/analytics/react";
 import RadioAnswer from "./components/RadioAnswer";
 import TableAnswer from "./components/TableAnswer";
@@ -13,8 +13,11 @@ import { AnswerData } from "./types/AnswerData";
 import FloatingActionButton from "./components/FloatingActionButton";
 import SourceInput from "./components/SourceInput";
 import SubmitButton from "./components/SubmitButton";
+import AskAIMenu from "./components/AskAIMenu";
 
 function App() {
+  const [selectedMenu, setSelectedMenu] = useState<string>("soal");
+
   const [question, setQuestion] = useState<string>("");
   const [data, setData] = useState<AnswerData[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
@@ -160,7 +163,6 @@ function App() {
   };
 
   useEffect(() => {
-
     if (selectedMatkul !== 0) {
       loadAnswers();
     }
@@ -177,7 +179,6 @@ function App() {
   }, [loadAnswers]);
 
   useEffect(() => {
-
     if (selectedMatkul !== 0) {
       loadAnswers();
     }
@@ -202,58 +203,96 @@ function App() {
           </a>
         </p>
       </header>
+
       <div className="min-h-screen bg-dark-gray w-full p-5 sm:p-10 lg:p-5 flex flex-col">
-        <div className="xl:flex lg:gap-5 h-full">
-          <div className="relative w-full xl:w-1/2 flex flex-col gap-5">
-            {isLoading && (
-              <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="text-white text-xl">
-                  Lagi ngirim soal, bentar yaa...
-                </div>
-              </div>
-            )}
-            <form
-              className={`w-full flex flex-col gap-5 ${
-                isLoading ? "pointer-events-none opacity-50" : ""
-              }`}
-              onSubmit={submitQuestion}
-            >
-              <div className="p-5 border rounded-md">
-                <MatkulSelect
-                  selectedOption={selectedMatkul}
-                  setSelectedMatkulName={setSelectedMatkulName}
-                  onOptionChange={updateSelectedMatkul}
-                />
-              </div>
-
-              <div className="border p-5 rounded-md">
-                <SourceInput
-                  source={source}
-                  onSourceChange={(e) => setSource(e.target.value)}
-                />
-                <Question text={question} onTextChange={updateQuestionText} />
-                <RadioAnswer
-                  selectedOption={selectedAnswer}
-                  onOptionChange={updateSelectedAnswer}
-                />
-                <SubmitButton isLoading={isLoading} />
-              </div>
-            </form>
+        <div className="flex justify-around bg-blue-500 border">
+          <div
+            className={`w-1/2 text-center py-2 cursor-pointer border-l border-r ${
+              selectedMenu == "soal" && "bg-blue-700"
+            } hover:bg-blue-700 text-white`}
+            onClick={() => setSelectedMenu("soal")}
+          >
+            Upload Soal
           </div>
-
-          <div className="w-full xl:w-1/2 flex-1">
-            <TableAnswer
-              data={data}
-              setData={setData}
-              matkul_id={selectedMatkul}
-              matkul_name={selectedMatkulName}
-            />
+          <div
+            className={`w-1/2 text-center py-2 cursor-pointer ${
+              selectedMenu == "ask_ai" && "bg-blue-700"
+            } hover:bg-blue-700 text-white`}
+            onClick={() => setSelectedMenu("ask_ai")}
+          >
+            Tanya AI
           </div>
         </div>
+
+        {selectedMenu == "soal" && (
+          <div className="xl:flex lg:gap-5 h-full mt-5">
+            <div className="relative w-full xl:w-1/2 flex flex-col gap-5">
+              {isLoading && (
+                <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="text-white text-xl">
+                    Lagi ngirim soal, bentar yaa...
+                  </div>
+                </div>
+              )}
+              <form
+                className={`w-full flex flex-col gap-5 ${
+                  isLoading ? "pointer-events-none opacity-50" : ""
+                }`}
+                onSubmit={submitQuestion}
+              >
+                <div className="p-5 border rounded-md">
+                  <MatkulSelect
+                    selectedOption={selectedMatkul}
+                    setSelectedMatkulName={setSelectedMatkulName}
+                    onOptionChange={updateSelectedMatkul}
+                  />
+                </div>
+
+                <div className="border p-5 rounded-md">
+                  <SourceInput
+                    source={source}
+                    onSourceChange={(e) => setSource(e.target.value)}
+                  />
+                  <Question text={question} onTextChange={updateQuestionText} />
+                  <RadioAnswer
+                    selectedOption={selectedAnswer}
+                    onOptionChange={updateSelectedAnswer}
+                  />
+                  <SubmitButton isLoading={isLoading} />
+                </div>
+              </form>
+            </div>
+
+            <div className="w-full xl:w-1/2 flex-1">
+              <TableAnswer
+                data={data}
+                setData={setData}
+                matkul_id={selectedMatkul}
+                matkul_name={selectedMatkulName}
+              />
+            </div>
+          </div>
+        )}
+
+        {selectedMenu == "ask_ai" && <AskAIMenu />}
 
         <FloatingActionButton onClick={scrollToTopOfPage} />
 
         <Analytics />
+
+        <ToastContainer
+          position="top-right"
+          autoClose={1200}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          transition={Bounce}
+        />
       </div>
     </>
   );
