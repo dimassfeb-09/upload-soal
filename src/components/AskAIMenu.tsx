@@ -162,9 +162,9 @@ const AskAIMenu = () => {
       <div className="w-full h-[46rem] bg-white shadow-xl rounded-lg overflow-hidden">
         <div className="p-4 flex flex-col h-full justify-between">
           {/* Header/Fixed element (Optional) */}
-          <div className="flex gap-5">
+          <div className="flex flex-col md:flex-row gap-3">
             {/* Input for API Key */}
-            <div className="w-3/4">
+            <div className="w-full md:w-3/4">
               <label
                 htmlFor="apiKey"
                 className="block text-sm font-medium text-gray-700"
@@ -179,21 +179,21 @@ const AskAIMenu = () => {
                 className="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter your API key"
               />
-              <p className="text-sm text-red-500 mb-4">
-                Untuk menggunakan AI, Anda perlu memasukkan API Key. Silakan
-                daftar dan buat API Key di website berikut ini{" "}
+
+              <p className="text-sm text-red-500">
+                Untuk menggunakan AI, masukkan API Key yang dapat Anda buat di{" "}
                 <a
                   className="text-blue-500"
                   href="https://console.groq.com/keys"
                 >
                   https://console.groq.com/keys
                 </a>
-                . Setelah itu, masukkan API Key pada kolom di atas.
-              </p>{" "}
+                .
+              </p>
             </div>
 
             {/* Dropdown Model Selection */}
-            <div className="mb-4 w-1/4">
+            <div className="w-full mb-4 md:w-1/4">
               <label
                 htmlFor="modelSelect"
                 className="block text-sm font-medium text-gray-700"
