@@ -1,5 +1,3 @@
-import React from "react";
-
 interface SelectMenuProps {
   selectedMenu: string;
   setSelectedMenu: (select: string) => void;
