@@ -11,10 +11,8 @@ const RadioAnswer: React.FC<RadioAnswerProps> = ({
 }) => {
   return (
     <div>
-      <h1 className="text-white font-bold text-sm">
-        Pilih jawaban yang bener!
-      </h1>
-      <div className="border rounded-md p-5 mt-3 bg-gray-700">
+      <h1 className=" font-bold text-sm">Pilih jawaban yang bener!</h1>
+      <div className="border rounded-md p-5 mt-3 ">
         <div className="grid grid-cols-4 gap-4 ">
           {["A", "B", "C", "D"].map((option) => (
             <div
@@ -26,7 +24,7 @@ const RadioAnswer: React.FC<RadioAnswerProps> = ({
                 type="radio"
                 value={option}
                 name="bordered-radio"
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-dark-gray dark:border-gray-600"
+                className="w-4 h-4 text-blue-600  border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 "
                 checked={selectedOption === option}
                 onChange={onOptionChange}
               />

@@ -15,7 +15,6 @@ interface TableAnswerProps {
   data: AnswerData[];
   setData: React.Dispatch<React.SetStateAction<AnswerData[]>>;
   matkul_id: number;
-  matkul_name: string;
 }
 
 type SoalData = {
@@ -26,7 +25,6 @@ type SoalData = {
 const TableAnswer: React.FC<TableAnswerProps> = ({
   matkul_id,
   data,
-  matkul_name,
   setData,
 }) => {
   const [lastUpdated, setLastUpdated] = useState<string>("");
@@ -324,23 +322,24 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full p-5 mt-5 border rounded-md xl:mt-0">
-      <div className="text-3xl font-bold text-white">
-        Real-Time Jawaban <span className="text-orange-500">{matkul_name}</span>
-        <div className="mt-2 text-lg font-bold">
+    <div className="flex flex-col h-full p-5 mt-5 border-2 rounded-md xl:mt-0">
+      <div className="text-3xl font-bold ">
+        <div className="flex justify-between">
+          <div>Real-Time Jawaban</div>
+          <div className="mt-3 font-bold  text-sm">
+            {lastUpdated && `Last Updated: ${lastUpdated}`}
+          </div>
+        </div>
+        <div className="mt-2 text-xs font-bold">
           Data otomatis update ketika terdapat data baru.
         </div>
-        <div className="mt-3 font-bold text-white text-sm">
-          {lastUpdated && `Last Updated: ${lastUpdated}`}
-        </div>
       </div>
-      <hr className="mt-3" />
-      <div className="flex  mt-4 flex flex-col gap-2 text-white">
+      <div className="mt-2 flex items-center justify-between gap-2 ">
         <label htmlFor="model">Pilih Model AI</label>
         <select
           onChange={(e) => setSelectedModels(e.target.value)}
           value={selectedModels}
-          className="px-4 py-2 rounded-lg border bg-white text-gray-700 border-gray-300 hover:bg-gray-100 transition-all duration-300"
+          className="px-4 py-2 md:w-1/2 rounded-lg border  text-gray-500 border-gray-300  transition-all duration-300"
         >
           {optionModelsGroq.map((option, index) => (
             <option key={index} value={option.id}>
@@ -350,7 +349,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         </select>
       </div>
 
-      <div className="flex items-center w-full h-10 pl-2 mt-3 bg-white border-2 rounded-lg input-section group group-focus-within:border-pink-700 group-focus-within:border-4">
+      <div className="flex items-center bg-white w-full h-10 pl-2 mt-3  border-2 rounded-lg input-section group group-focus-within:border-pink-700 group-focus-within:border-4">
         <div className="ml-2">🔍</div>
         <input
           type="text"
@@ -375,8 +374,8 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
       <div className="flex-1 mt-5 overflow-x-auto overflow-y-auto hide-scrollbar">
         <div className="xl:h-[1em]">
-          <table className="relative w-full text-sm text-left text-gray-500 border border-gray-300 rtl:text-right dark:text-gray-400 dark:border-gray-600">
-            <thead className=" top-0 z-10 text-xs text-gray-700 uppercase border-b border-gray-300 bg-dark-gray dark:bg-dark-gray dark:text-gray-400 dark:border-gray-600">
+          <table className="relative w-full text-sm text-left  border border-gray-300 rtl:text-right  dark:border-gray-600">
+            <thead className=" top-0 z-10 text-xs  uppercase border-b border-gray-300   dark:border-gray-600">
               <tr>
                 <th
                   scope="col"
@@ -401,10 +400,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
             <tbody>
               {filteredData.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={3}
-                    className="px-6 py-4 text-center text-gray-500 dark:text-gray-400"
-                  >
+                  <td colSpan={3} className="px-6 py-4 text-center  ">
                     No data available
                   </td>
                 </tr>
@@ -413,15 +409,20 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                   <tr
                     key={item.id}
                     className={`border-b dark:border-gray-700 ${
-                      highlightedRow === index
-                        ? "bg-gray-200 dark:bg-gray-600"
-                        : "bg-white dark:bg-gray-800"
+                      highlightedRow === index ? "bg-gray-600" : ""
                     }`}
                   >
-                    <td className="px-6 py-4 font-medium text-gray-900 border-r border-gray-300 whitespace-nowrap dark:text-white dark:border-gray-600">
+                    <td className="px-6 py-4 font-medium  border-r border-gray-300 whitespace-nowrap dark: dark:border-gray-600">
                       <div className="flex flex-col">
-                        <div className="flex items-center justify-center p-2 text-xs text-white bg-blue-600 rounded-full w-min h-min">
-                          ID-{item.id}
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center p-2 text-xs  bg-blue-600 rounded-full w-min h-min">
+                            ID-{item.id}
+                          </div>
+                          {highlightedRow === index && (
+                            <div className="flex items-center justify-center p-2 text-xs  bg-green-600 rounded-full w-min h-min">
+                              NEW
+                            </div>
+                          )}
                         </div>
 
                         <BarCorrectChart
@@ -434,7 +435,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                             !loadingAskGroq &&
                             handleAskAI(item.question, item.answer)
                           }
-                          className={`mt-4 w-min px-3 py-1 rounded-full cursor-pointer text-white text-sm ${
+                          className={`mt-4 w-min px-3 py-1 rounded-full cursor-pointer  text-sm ${
                             loadingAskGroq
                               ? "bg-blue-300 cursor-not-allowed"
                               : "bg-blue-500"
@@ -458,7 +459,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-4xl font-bold text-gray-900 border-r border-gray-300 whitespace-nowrap dark:text-white dark:border-gray-600">
+                    <td className="px-6 py-4 text-4xl font-bold  border-r border-gray-300 whitespace-nowrap dark: dark:border-gray-600">
                       <div className="text-center">
                         {item.answer || "No answer"}
                       </div>
@@ -484,7 +485,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
 
                     <td
                       scope="row"
-                      className="py-5 pl-5 font-medium text-gray-900 border-r border-gray-300 whitespace-nowrap dark:text-white dark:border-gray-600"
+                      className="py-5 pl-5 font-medium  border-r border-gray-300 whitespace-nowrap dark: dark:border-gray-600"
                     >
                       {(() => {
                         const result = containsBadWord(item.question || "");

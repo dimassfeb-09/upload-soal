@@ -10,6 +10,8 @@ interface Message {
 }
 
 const AskAIMenu = () => {
+  const [isSettingHidden, setIsSettingHidden] = useState<boolean>(true);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
 
@@ -19,10 +21,8 @@ const AskAIMenu = () => {
     "llama-3.3-70b-versatile"
   );
   const [loadingAskGroq, setLoadingAskGroq] = useState<boolean>(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll ke bawah ketika ada pesan baru
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -164,65 +164,67 @@ const AskAIMenu = () => {
   }, [apiKey]);
 
   return (
-    <div className="flex flex-col items-center p-4">
-      <div className="w-full h-[46rem] bg-white shadow-xl rounded-lg overflow-hidden">
+    <div className="flex flex-col items-center mt-4 ">
+      <div className="w-full h-[46rem] bg-white dark:bg-dark-gray border  shadow-xl rounded-lg overflow-hidden">
         <div className="p-4 flex flex-col h-full justify-between">
-          {/* Header/Fixed element (Optional) */}
-          <div className="flex flex-col md:flex-row gap-3">
-            {/* Input for API Key */}
-            <div className="w-full md:w-3/4">
-              <label
-                htmlFor="apiKey"
-                className="block text-sm font-medium text-gray-700"
-              >
-                API Key:
-              </label>
-              <input
-                id="apiKey"
-                type="text"
-                value={apiKey}
-                onChange={(e) => handleSetApiKey(e.target.value)}
-                className="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your API key"
-              />
-
-              <p className="text-sm text-red-500">
-                Untuk menggunakan AI, masukkan API Key yang dapat Anda buat di{" "}
-                <a
-                  className="text-blue-500"
-                  href="https://console.groq.com/keys"
-                >
-                  https://console.groq.com/keys
-                </a>
-                .
-              </p>
-            </div>
-
-            {/* Dropdown Model Selection */}
-            <div className="w-full mb-4 md:w-1/4">
-              <label
-                htmlFor="modelSelect"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Select Model:
-              </label>
-              <select
-                id="modelSelect"
-                value={selectedModels}
-                onChange={(e) => setSelectedModels(e.target.value)}
-                className="mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!apiKey} // Disable the model select until API Key is provided
-              >
-                {optionModelsGroq.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.id} - {model.owned_by}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div
+            className="cursor-pointer bg-blue-500 mb-3 px-5 py-1 flex items-center gap-5 w-max"
+            onClick={() => setIsSettingHidden(!isSettingHidden)}
+          >
+            {!isSettingHidden ? "Show Setting" : "Hidden Setting"}
           </div>
+          {isSettingHidden && (
+            <div className="flex flex-col border-b mb-2 md:flex-row gap-3">
+              <div className="w-full md:w-3/4">
+                <label htmlFor="apiKey" className="block text-sm font-medium">
+                  API Key:
+                </label>
+                <input
+                  id="apiKey"
+                  type="text"
+                  value={apiKey}
+                  onChange={(e) => handleSetApiKey(e.target.value)}
+                  className="text-gray-500 mt-1 block w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your API key"
+                />
 
-          {/* Messages Container with Scroll */}
+                <p className="text-sm text-red-500">
+                  Untuk menggunakan AI, masukkan API Key yang dapat Anda buat di{" "}
+                  <a
+                    className="text-blue-500"
+                    href="https://console.groq.com/keys"
+                  >
+                    https://console.groq.com/keys
+                  </a>
+                  .
+                </p>
+              </div>
+
+              {/* Dropdown Model Selection */}
+              <div className="w-full mb-4 md:w-1/4">
+                <label
+                  htmlFor="modelSelect"
+                  className="block text-sm font-medium"
+                >
+                  Select Model:
+                </label>
+                <select
+                  id="modelSelect"
+                  value={selectedModels}
+                  onChange={(e) => setSelectedModels(e.target.value)}
+                  className="mt-1 text-gray-500 block w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!apiKey} // Disable the model select until API Key is provided
+                >
+                  {optionModelsGroq.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.id} - {model.owned_by}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2 overflow-y-auto flex-1 max-h-[35rem] mb-4">
             {messages.map((message) => (
               <div
@@ -233,9 +235,7 @@ const AskAIMenu = () => {
               >
                 <div
                   className={`p-3 rounded-lg max-w-xs ${
-                    message.sender === "user"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-900"
+                    message.sender === "user" ? "bg-blue-500 " : "bg-gray-700"
                   }`}
                 >
                   {/* Use dangerouslySetInnerHTML for bot */}
@@ -257,7 +257,7 @@ const AskAIMenu = () => {
               value={input}
               onKeyPress={handleKeyPress} // Detect Enter key press
               onChange={(e) => setInput(e.target.value)}
-              className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 w-[90%] p-2 border text-gray-500 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Type your message..."
               disabled={!apiKey} // Disable input until API Key is provided
               cols={10} // Set max columns to 10
@@ -265,7 +265,7 @@ const AskAIMenu = () => {
 
             <button
               onClick={handleSendMessage}
-              className="ml-2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              className="ml-2 p-2 w-[7rem] bg-blue-500  rounded-lg hover:bg-blue-600"
               disabled={!apiKey} // Disable button until API Key is provided
             >
               {loadingAskGroq ? "Loading..." : "Send"}

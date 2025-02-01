@@ -42,17 +42,17 @@ Opsi C
 Opsi D`;
 
   return (
-    <div className="mt-5 text-sm text-white">
+    <div className="mt-5 text-sm ">
       <label htmlFor="editor" className="font-bold">
         Opsi Jawaban (ABCD)
         <span className="text-red-500"> {lineCount}/4</span>
       </label>
-      <div className="w-full mt-2 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-        <div className="bg-white rounded-b-lg dark:bg-gray-700 rounded-md">
+      <div className="w-full mt-2 border border-gray-200 rounded-lg   dark:border-gray-600">
+        <div className="bg-white rounded-b-lg  rounded-md">
           <textarea
             id="editor"
             rows={4.5}
-            className="rounded-md p-5 block w-full text-sm text-gray-800 bg-white border dark:bg-gray-700 focus:ring-0 dark:text-white dark:placeholder-gray-400"
+            className="rounded-md p-5 block w-full text-sm text-gray-800 bg-white border  focus:ring-0 dark: dark:placeholder-gray-400"
             placeholder={placeholderText}
             value={text}
             onChange={handleTextChange}

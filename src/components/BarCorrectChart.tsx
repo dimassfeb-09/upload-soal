@@ -17,7 +17,7 @@ const BarCorrectChart: React.FC<BarChartProps> = ({
         <div className="flex w-min items-end space-x-4">
           <div className="flex flex-col items-center">
             <div
-              className="bg-teal-600 rounded-md text-xs text-white flex items-center justify-center"
+              className="bg-teal-600 rounded-md text-xs  flex items-center justify-center"
               style={{
                 width: "2rem",
                 height: `${(correctCount / maxCount) * 60}px`,
@@ -31,7 +31,7 @@ const BarCorrectChart: React.FC<BarChartProps> = ({
 
           <div className="flex flex-col items-center">
             <div
-              className="bg-red-600 rounded-md text-xs text-white flex items-center justify-center"
+              className="bg-red-600 rounded-md text-xs  flex items-center justify-center"
               style={{
                 width: "2rem",
                 height: `${(incorrectCount / maxCount) * 60}px`,

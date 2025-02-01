@@ -8,7 +8,7 @@ export default function DialogAIGroq({
   handleDialog,
 }: DialogAIGroqProps) {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 px-[100px] py-[100px]">
+    <div className="fixed inset-0 flex items-center justify-center  bg-opacity-50 px-[100px] py-[100px]">
       <div className="bg-white p-6 rounded-lg shadow-2xl w-full h-full max-w-5xl max-h-full relative flex flex-col">
         {/* Close Button */}
         <button
@@ -30,7 +30,7 @@ export default function DialogAIGroq({
         <div className="flex justify-center mt-4 pb-4">
           <button
             onClick={() => handleDialog(false)}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-all duration-300"
+            className="px-6 py-2 bg-blue-500  rounded-lg shadow-md hover:bg-blue-600 transition-all duration-300"
           >
             Oke
           </button>
