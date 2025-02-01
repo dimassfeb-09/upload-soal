@@ -409,7 +409,9 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                   <tr
                     key={item.id}
                     className={`border-b dark:border-gray-700 ${
-                      highlightedRow === index ? "bg-gray-600" : ""
+                      highlightedRow === index
+                        ? "bg-gray-300 dark:bg-gray-600"
+                        : ""
                     }`}
                   >
                     <td className="px-6 py-4 font-medium  border-r border-gray-300 whitespace-nowrap dark: dark:border-gray-600">
