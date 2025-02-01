@@ -176,7 +176,9 @@ export default function FormUploadSoal(props: FormUploadSoalProps) {
                 {["A", "B", "C", "D"].map((option) => (
                   <div
                     key={option}
-                    className="flex items-center ps-4 border border-gray-200 rounded"
+                    className={`flex items-center ps-4 border border-gray-200 rounded ${
+                      formFields.selectedAnswer === option && "bg-blue-500"
+                    }`}
                   >
                     <input
                       id={`bordered-radio-${option}`}

@@ -26,7 +26,9 @@ const BarCorrectChart: React.FC<BarChartProps> = ({
             >
               {correctCount}
             </div>
-            <span className="text-xs mt-1">Benar</span>
+            <span className="text-xs mt-1 text-black dark:text-white">
+              Benar
+            </span>
           </div>
 
           <div className="flex flex-col items-center">
@@ -40,7 +42,9 @@ const BarCorrectChart: React.FC<BarChartProps> = ({
             >
               {incorrectCount}
             </div>
-            <span className="text-xs mt-1">Salah</span>
+            <span className="text-xs mt-1 text-black dark:text-white">
+              Salah
+            </span>
           </div>
         </div>
       </div>

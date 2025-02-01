@@ -235,7 +235,9 @@ const AskAIMenu = () => {
               >
                 <div
                   className={`p-3 rounded-lg max-w-xs ${
-                    message.sender === "user" ? "bg-blue-500 " : "bg-gray-700"
+                    message.sender === "user"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 dark:bg-gray-700"
                   }`}
                 >
                   {/* Use dangerouslySetInnerHTML for bot */}
@@ -265,7 +267,7 @@ const AskAIMenu = () => {
 
             <button
               onClick={handleSendMessage}
-              className="ml-2 p-2 w-[7rem] bg-blue-500  rounded-lg hover:bg-blue-600"
+              className="ml-2 p-2 w-[7rem] text-white bg-blue-500  rounded-lg hover:bg-blue-600"
               disabled={!apiKey} // Disable button until API Key is provided
             >
               {loadingAskGroq ? "Loading..." : "Send"}

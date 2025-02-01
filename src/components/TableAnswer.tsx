@@ -410,12 +410,12 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                     key={item.id}
                     className={`border-b dark:border-gray-700 ${
                       highlightedRow === index
-                        ? "bg-gray-300 dark:bg-gray-600"
+                        ? "bg-gray-200 dark:bg-gray-600"
                         : ""
                     }`}
                   >
                     <td className="px-6 py-4 font-medium  border-r border-gray-300 whitespace-nowrap dark: dark:border-gray-600">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-white">
                         <div className="flex items-center gap-3">
                           <div className="flex items-center justify-center p-2 text-xs  bg-blue-600 rounded-full w-min h-min">
                             ID-{item.id}
@@ -454,7 +454,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
                         </div>
                       </div>
 
-                      <div className="mt-3">
+                      <div className="mt-3 ">
                         {item.created_at
                           ? new Date(item.created_at).toLocaleString()
                           : "Date not available"}
