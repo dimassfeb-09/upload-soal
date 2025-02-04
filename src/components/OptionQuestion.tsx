@@ -48,11 +48,11 @@ Opsi D`;
         <span className="text-red-500"> {lineCount}/4</span>
       </label>
       <div className="w-full mt-2 border border-gray-200 rounded-lg   dark:border-gray-600">
-        <div className="bg-white rounded-b-lg  rounded-md">
+        <div className=" rounded-b-lg  rounded-md">
           <textarea
             id="editor"
             rows={4.5}
-            className="rounded-md p-5 block w-full text-sm text-gray-800 bg-white border  focus:ring-0 dark: dark:placeholder-gray-400"
+            className="rounded-md p-5 block w-full text-sm text-gray-800  border  focus:ring-0 dark: dark:placeholder-gray-400"
             placeholder={placeholderText}
             value={text}
             onChange={handleTextChange}

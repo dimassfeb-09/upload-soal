@@ -165,7 +165,7 @@ const AskAIMenu = () => {
 
   return (
     <div className="flex flex-col items-center mt-4 ">
-      <div className="w-full h-[46rem] bg-white dark:bg-dark-gray border  shadow-xl rounded-lg overflow-hidden">
+      <div className="w-full h-full  dark:bg-dark-gray border  shadow-xl rounded-lg overflow-hidden">
         <div className="p-4 flex flex-col h-full justify-between">
           <div
             className="cursor-pointer bg-blue-500 mb-3 px-5 py-1 flex items-center gap-5 w-max"

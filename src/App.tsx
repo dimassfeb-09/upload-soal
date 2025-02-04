@@ -14,10 +14,10 @@ function App() {
   const [selectedMenu, setSelectedMenu] = useState<string>("soal");
 
   return (
-    <div className="bg-white text-black dark:bg-dark-gray dark:text-white">
+    <div className=" text-black dark:bg-dark-gray dark:text-white">
       <Header />
 
-      <div className="h-[53rem] w-full p-5 sm:p-10 lg:p-5 flex flex-col">
+      <div className="w-full h-screen dark:bg-dark-gray p-5 sm:p-10 lg:p-5 flex flex-col">
         <SelectMenu
           selectedMenu={selectedMenu}
           setSelectedMenu={setSelectedMenu}

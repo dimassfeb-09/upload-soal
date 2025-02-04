@@ -349,7 +349,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         </select>
       </div>
 
-      <div className="flex items-center bg-white w-full h-10 pl-2 mt-3  border-2 rounded-lg input-section group group-focus-within:border-pink-700 group-focus-within:border-4">
+      <div className="flex items-center  w-full h-10 pl-2 mt-3  border-2 rounded-lg input-section group group-focus-within:border-pink-700 group-focus-within:border-4  dark:bg-white">
         <div className="ml-2">🔍</div>
         <input
           type="text"
@@ -372,7 +372,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         )}
       </div>
 
-      <div className="flex-1 mt-5 bg-white dark:bg-dark-gray overflow-x-auto overflow-y-auto hide-scrollbar">
+      <div className="flex-1 mt-5  dark:bg-dark-gray overflow-x-auto overflow-y-auto hide-scrollbar">
         <div className="xl:h-[1em]">
           <table className="relative w-full text-sm text-left  border border-gray-300 rtl:text-right  dark:border-gray-600">
             <thead className=" top-0 z-10 text-xs  uppercase border-b border-gray-300   dark:border-gray-600">

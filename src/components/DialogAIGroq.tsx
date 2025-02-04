@@ -9,7 +9,7 @@ export default function DialogAIGroq({
 }: DialogAIGroqProps) {
   return (
     <div className="fixed inset-0 flex items-center justify-center  bg-opacity-50 px-[100px] py-[100px]">
-      <div className="bg-white p-6 rounded-lg shadow-2xl w-full h-full max-w-5xl max-h-full relative flex flex-col">
+      <div className=" p-6 rounded-lg shadow-2xl w-full h-full max-w-5xl max-h-full relative flex flex-col">
         {/* Close Button */}
         <button
           onClick={() => handleDialog(false)}
