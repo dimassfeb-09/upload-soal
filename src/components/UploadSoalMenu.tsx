@@ -85,7 +85,7 @@ export default function UploadSoalMenu() {
   };
 
   return (
-    <div className="xl:flex lg:gap-5 h-full mt-5">
+    <div className="xl:flex lg:gap-5 h-full mt-5 bg-white dark:bg-dark-gray">
       <div className="relative w-full xl:w-1/2 flex flex-col gap-5">
         <FormUploadSoal
           selectedMatkul={selectedMatkul}
@@ -94,7 +94,7 @@ export default function UploadSoalMenu() {
         />
       </div>
 
-      <div className="w-full xl:w-1/2 flex-1">
+      <div className="w-full xl:w-1/2 flex-1 bg-white dark:bg-dark-gray">
         <TableAnswer
           data={answerData}
           setData={setAnswerData}

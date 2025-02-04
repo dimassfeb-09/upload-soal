@@ -334,12 +334,12 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
           Data otomatis update ketika terdapat data baru.
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2 ">
+      <div className="mt-2 flex flex-col justify-start sm:flex-row sm:items-center sm:justify-between gap-2 ">
         <label htmlFor="model">Pilih Model AI</label>
         <select
           onChange={(e) => setSelectedModels(e.target.value)}
           value={selectedModels}
-          className="px-4 py-2 md:w-1/2 rounded-lg border  text-gray-500 border-gray-300  transition-all duration-300"
+          className="px-4 py-2 w-full md:w-1/2 rounded-lg border  text-gray-500 border-gray-300  transition-all duration-300"
         >
           {optionModelsGroq.map((option, index) => (
             <option key={index} value={option.id}>
@@ -372,7 +372,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
         )}
       </div>
 
-      <div className="flex-1 mt-5 overflow-x-auto overflow-y-auto hide-scrollbar">
+      <div className="flex-1 mt-5 bg-white dark:bg-dark-gray overflow-x-auto overflow-y-auto hide-scrollbar">
         <div className="xl:h-[1em]">
           <table className="relative w-full text-sm text-left  border border-gray-300 rtl:text-right  dark:border-gray-600">
             <thead className=" top-0 z-10 text-xs  uppercase border-b border-gray-300   dark:border-gray-600">
