@@ -357,7 +357,7 @@ const TableAnswer: React.FC<TableAnswerProps> = ({
           placeholder="Cari di sini. Dapat menggunakan CTRL+F atau ⌘+F"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-full px-2 ml-2 border-gray-500 rounded-lg outline-none caret-blue-700"
+          className="w-full h-full px-2 ml-2 text-black border-gray-500 rounded-lg outline-none caret-blue-700"
           aria-label="Search"
           onFocus={handleSearchActive}
           role="searchbox"
