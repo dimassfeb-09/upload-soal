@@ -9,7 +9,6 @@ interface QuestionFormProps {
 
 export default function QuestionForm({ isDark }: QuestionFormProps) {
   const [subjects, setSubjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   // State untuk form
@@ -24,7 +23,6 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
 
   const fetchSubjects = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('matkul')
         .select('*')
@@ -39,8 +37,6 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
       setSubjects(data || []);
     } catch (err) {
       console.error('Unexpected error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -57,7 +53,6 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
     }
 
     try {
-      setLoading(true);
       const formattedQuestion = question.replace(/\n/g, "<br>");
 
       const { error } = await supabase.from('soal').insert([
@@ -84,8 +79,6 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
     } catch (err) {
       console.error(err);
       alert('Gagal mengirim soal');
-    } finally {
-      setLoading(false);
     }
   };
 
