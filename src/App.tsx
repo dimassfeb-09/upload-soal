@@ -1,51 +1,12 @@
-import { useState } from "react";
-import "./output.css";
-import "./input.css";
-import { ToastContainer, Bounce } from "react-toastify";
-import { Analytics } from "@vercel/analytics/react";
-import "react-toastify/dist/ReactToastify.css";
-import FloatingActionButton from "./components/FloatingActionButton";
-import AskAIMenu from "./components/AskAIMenu";
-import Header from "./components/Header";
-import SelectMenu from "./components/SelectMenu";
-import UploadSoalMenu from "./components/UploadSoalMenu";
+import { Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
 
 function App() {
-  const [selectedMenu, setSelectedMenu] = useState<string>("soal");
-
   return (
-    <div className=" text-black dark:bg-dark-gray dark:text-white">
-      <Header />
-
-      <div className="w-full h-screen dark:bg-dark-gray p-5 sm:p-10 lg:p-5 flex flex-col">
-        <SelectMenu
-          selectedMenu={selectedMenu}
-          setSelectedMenu={setSelectedMenu}
-        />
-
-        {selectedMenu == "soal" && <UploadSoalMenu />}
-
-        {selectedMenu == "ask_ai" && <AskAIMenu />}
-
-        <FloatingActionButton />
-
-        <Analytics />
-
-        <ToastContainer
-          position="top-right"
-          autoClose={1200}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          transition={Bounce}
-        />
-      </div>
-    </div>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="*" element={<div>Page not found</div>} />
+    </Routes>
   );
 }
 
