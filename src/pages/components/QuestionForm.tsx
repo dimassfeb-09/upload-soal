@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MdEditDocument } from "react-icons/md";
 import supabase from "../../utils/supabase";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface QuestionFormProps {
   isDark: boolean;
@@ -10,33 +10,57 @@ interface QuestionFormProps {
 export default function QuestionForm({ isDark }: QuestionFormProps) {
   const [subjects, setSubjects] = useState<any[]>([]);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Ambil subject awal dari URL (?matkul_id=...) atau localStorage
+  const initialSubject = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("matkul_id");
+    if (fromUrl) return fromUrl;
+
+    const fromStorage = localStorage.getItem("selected_matkul_id");
+    return fromStorage ?? "";
+  }, []);
 
   // State untuk form
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [source, setSource] = useState('');
-  const [question, setQuestion] = useState('');
-  const [selectedAnswer, setSelectedAnswer] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState<string>(initialSubject);
+  const [source, setSource] = useState<string>("");
+  const [question, setQuestion] = useState<string>("");
+  const [selectedAnswer, setSelectedAnswer] = useState<string>("");
 
   useEffect(() => {
     fetchSubjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Kalau URL berubah (mis. user klik back/forward), sinkronkan state selectedSubject
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlSubject = params.get("matkul_id") ?? "";
+
+    setSelectedSubject(urlSubject);
+
+    // sync juga ke localStorage biar persist saat refresh
+    if (urlSubject) localStorage.setItem("selected_matkul_id", urlSubject);
+    else localStorage.removeItem("selected_matkul_id");
+  }, [location.search]);
 
   const fetchSubjects = async () => {
     try {
       const { data, error } = await supabase
-        .from('matkul')
-        .select('*')
-        .eq('is_visible', true)
-        .order('name', { ascending: true });
+        .from("matkul")
+        .select("*")
+        .eq("is_visible", true)
+        .order("name", { ascending: true });
 
       if (error) {
-        console.error('Error fetching subjects:', error);
+        console.error("Error fetching subjects:", error);
         return;
       }
 
       setSubjects(data || []);
     } catch (err) {
-      console.error('Unexpected error:', err);
+      console.error("Unexpected error:", err);
     }
   };
 
@@ -44,20 +68,22 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
     e.preventDefault();
 
     if (!selectedSubject) {
-      alert('Pilih subject dulu!');
+      alert("Pilih subject dulu!");
       return;
     }
     if (!question.trim() || !selectedAnswer) {
-      alert('Lengkapi soal dan jawaban!');
+      alert("Lengkapi soal dan jawaban!");
       return;
     }
+
+    const subjectId = selectedSubject; // simpan dulu biar aman
 
     try {
       const formattedQuestion = question.replace(/\n/g, "<br>");
 
-      const { error } = await supabase.from('soal').insert([
+      const { error } = await supabase.from("soal").insert([
         {
-          matkul_id: selectedSubject,
+          matkul_id: subjectId,
           source: source,
           question: formattedQuestion,
           answer: selectedAnswer,
@@ -66,25 +92,30 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
 
       if (error) throw error;
 
-      alert('Soal berhasil dikirim!');
+      alert("Soal berhasil dikirim!");
 
-      setQuestion('');
-      setSelectedAnswer('');
-      setSource('');
-      setSelectedSubject('');
+      // Reset field lain, tapi JANGAN reset subject
+      setQuestion("");
+      setSelectedAnswer("");
+      setSource("");
 
+      // Pastikan URL tetap punya matkul_id
       const params = new URLSearchParams(location.search);
-      params.set("matkul_id", selectedSubject.toString());
-      navigate({ search: params.toString() }, { replace: true });
+      params.set("matkul_id", subjectId);
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     } catch (err) {
       console.error(err);
-      alert('Gagal mengirim soal');
+      alert("Gagal mengirim soal");
     }
   };
 
   const handleChangeSubject = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+    const value = e.target.value; // string
     setSelectedSubject(value);
+
+    // persist ke localStorage biar tetap saat refresh
+    if (value) localStorage.setItem("selected_matkul_id", value);
+    else localStorage.removeItem("selected_matkul_id");
 
     const searchParams = new URLSearchParams(location.search);
     if (value) {
@@ -104,39 +135,59 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
   };
 
   return (
-    <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-200'} p-6 flex flex-col h-full transition-colors duration-200`}>
-      <div className={`flex items-center gap-3 mb-6 pb-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+    <div
+      className={`${
+        isDark ? "bg-gray-800" : "bg-white"
+      } rounded-xl shadow-lg border ${
+        isDark ? "border-gray-700" : "border-gray-200"
+      } p-6 flex flex-col h-full transition-colors duration-200`}
+    >
+      <div
+        className={`flex items-center gap-3 mb-6 pb-4 border-b ${
+          isDark ? "border-gray-700" : "border-gray-200"
+        }`}
+      >
         <span className="text-blue-600 bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
           <MdEditDocument size={24} />
         </span>
-        <h3 className={`text-lg font-bold leading-tight tracking-[-0.015em] ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <h3
+          className={`text-lg font-bold leading-tight tracking-[-0.015em] ${
+            isDark ? "text-white" : "text-gray-900"
+          }`}
+        >
           Soal
         </h3>
       </div>
 
-      <form 
-          className="flex flex-col gap-5 h-full" 
-          onSubmit={(e) => {
-            e.preventDefault();
-            const confirmSubmit = window.confirm("Apakah Anda yakin ingin mengirim soal ini?");
-            if (confirmSubmit) {
-              handleSubmit(e);
-            }
-          }}
-        >
+      <form
+        className="flex flex-col gap-5 h-full"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const confirmSubmit = window.confirm("Apakah Anda yakin ingin mengirim soal ini?");
+          if (confirmSubmit) {
+            handleSubmit(e);
+          }
+        }}
+      >
         <div className="flex flex-col gap-2">
-          <label className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
             Mata Kuliah (Required)
           </label>
           <div className="relative">
             <select
               value={selectedSubject}
               onChange={handleChangeSubject}
-              className={`w-full appearance-none rounded-lg border ${isDark ? 'border-gray-600 bg-gray-700 text-white hover:border-blue-500' : 'border-gray-300 bg-white text-gray-900 hover:border-blue-400'} px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer`}
+              className={`w-full appearance-none rounded-lg border ${
+                isDark
+                  ? "border-gray-600 bg-gray-700 text-white hover:border-blue-500"
+                  : "border-gray-300 bg-white text-gray-900 hover:border-blue-400"
+              } px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer`}
             >
-              <option value={0}>Select a subject</option>
+              <option value="">Select a subject</option>
               {subjects.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
+                <option key={v.id} value={String(v.id)}>
+                  {v.name}
+                </option>
               ))}
             </select>
           </div>
@@ -144,7 +195,7 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
 
         {/* Source */}
         <div className="flex flex-col gap-2">
-          <label className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
             Sumber / Pengirim (Optional)
           </label>
           <input
@@ -152,29 +203,37 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
             value={source}
             onChange={(e) => setSource(e.target.value)}
             placeholder="e.g. Dr. Smith, Textbook Vol 2"
-            className={`w-full rounded-lg border ${isDark ? 'border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 hover:border-blue-500' : 'border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400'} px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
+            className={`w-full rounded-lg border ${
+              isDark
+                ? "border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 hover:border-blue-500"
+                : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400"
+            } px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
           />
         </div>
 
         <div className="flex flex-col gap-2 grow">
-          <label className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
             Konten Pertanyaan
           </label>
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Write your question here..."
-            className={`w-full flex-1 min-h-[140px] rounded-lg border ${isDark ? 'border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 hover:border-blue-500' : 'border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400'} px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-y`}
+            className={`w-full flex-1 min-h-[140px] rounded-lg border ${
+              isDark
+                ? "border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 hover:border-blue-500"
+                : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400"
+            } px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-y`}
           />
         </div>
 
         {/* Answer Key */}
         <div className="flex flex-col gap-3 pt-2">
-          <label className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
             Jawaban Benar
           </label>
           <div className="grid grid-cols-4 gap-3">
-            {['A', 'B', 'C', 'D'].map((letter) => (
+            {["A", "B", "C", "D"].map((letter) => (
               <label key={letter} className="cursor-pointer group relative">
                 <input
                   type="radio"
@@ -184,7 +243,13 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
                   onChange={(e) => setSelectedAnswer(e.target.value)}
                   className="peer sr-only"
                 />
-                <div className={`flex h-12 items-center justify-center rounded-lg border ${isDark ? 'border-gray-600 bg-gray-700 text-gray-400 hover:bg-gray-600' : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'} text-lg font-bold transition-all peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-600 shadow-sm hover:border-blue-400`}>
+                <div
+                  className={`flex h-12 items-center justify-center rounded-lg border ${
+                    isDark
+                      ? "border-gray-600 bg-gray-700 text-gray-400 hover:bg-gray-600"
+                      : "border-gray-300 bg-white text-gray-500 hover:bg-gray-50"
+                  } text-lg font-bold transition-all peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-600 shadow-sm hover:border-blue-400`}
+                >
                   {letter}
                 </div>
               </label>
@@ -198,7 +263,12 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
             className="group w-full h-12 flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-base transition-all active:scale-[0.98] shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
           >
             <span>Kirim Soal</span>
-            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
           </button>
@@ -207,9 +277,10 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
         <div className="text-center">
           <span
             onClick={() => {
-              setSource('');
-              setQuestion('');
-              setSelectedAnswer('');
+              setSource("");
+              setQuestion("");
+              setSelectedAnswer("");
+              // sengaja tidak reset subject
             }}
             className="text-red-600 dark:text-red-400 cursor-pointer hover:underline font-semibold"
           >
