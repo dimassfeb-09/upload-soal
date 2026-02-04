@@ -81,7 +81,6 @@ export default function QuestionForm() {
     return subjects.find((s) => String(s.id) === String(selectedSubject));
   }, [subjects, selectedSubject]);
 
-  const now = useMemo(() => new Date(), []);
   const isBeforeStart = useMemo(() => {
     if (!selectedMatkul?.visible_time) return false; // kalau null, anggap boleh submit
     return new Date() < new Date(selectedMatkul.visible_time);
