@@ -22,6 +22,45 @@ export default function QuestionForm() {
   const [question, setQuestion] = useState<string>("");
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
 
+  // --- helper: format visible_time ke WIB untuk ditampilkan di option ---
+  const formatStartWIB = (iso?: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const formatter = new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${formatter.format(d)} WIB`;
+  };
+
+  // --- ambil data matkul yang belum lewat invisible_time (atau invisible_time null) ---
+  const fetchSubjects = async () => {
+  try {
+    const nowIso = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("matkul")
+      .select("*")
+      .eq("is_visible", true)
+      .or(`invisible_time.is.null,invisible_time.gt.${nowIso}`)
+      .order("visible_time", { ascending: true, nullsFirst: false })
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching subjects:", error);
+      return;
+    }
+
+    setSubjects(data || []);
+  } catch (err) {
+    console.error("Unexpected error:", err);
+  }
+};
+
   useEffect(() => {
     fetchSubjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,24 +76,16 @@ export default function QuestionForm() {
     else localStorage.removeItem("selected_matkul_id");
   }, [location.search]);
 
-  const fetchSubjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("matkul")
-        .select("*")
-        .eq("is_visible", true)
-        .order("name", { ascending: true });
+  // --- cari matkul terpilih + cek apakah sudah mulai ---
+  const selectedMatkul = useMemo(() => {
+    return subjects.find((s) => String(s.id) === String(selectedSubject));
+  }, [subjects, selectedSubject]);
 
-      if (error) {
-        console.error("Error fetching subjects:", error);
-        return;
-      }
-
-      setSubjects(data || []);
-    } catch (err) {
-      console.error("Unexpected error:", err);
-    }
-  };
+  const now = useMemo(() => new Date(), []);
+  const isBeforeStart = useMemo(() => {
+    if (!selectedMatkul?.visible_time) return false; // kalau null, anggap boleh submit
+    return new Date() < new Date(selectedMatkul.visible_time);
+  }, [selectedMatkul]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +94,19 @@ export default function QuestionForm() {
       alert("Pilih subject dulu!");
       return;
     }
+
+    // kalau matkulnya tidak ada di list (mis. sudah hidden), blok
+    if (!selectedMatkul) {
+      alert("Mata kuliah tidak tersedia / sudah tidak aktif.");
+      return;
+    }
+
+    // blok submit kalau belum jam mulai
+    if (selectedMatkul.visible_time && new Date() < new Date(selectedMatkul.visible_time)) {
+      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
+      return;
+    }
+
     if (!question.trim() || !selectedAnswer) {
       alert("Lengkapi soal dan jawaban!");
       return;
@@ -111,9 +155,7 @@ export default function QuestionForm() {
     if (value) searchParams.set("matkul_id", value);
     else searchParams.delete("matkul_id");
 
-    // ✅ jangan 0, harus 1
     searchParams.set("page", "1");
-
     navigate({ pathname: location.pathname, search: searchParams.toString() }, { replace: true });
   };
 
@@ -130,6 +172,13 @@ export default function QuestionForm() {
         className="flex flex-col gap-4 sm:gap-5 h-full"
         onSubmit={(e) => {
           e.preventDefault();
+
+          // cegah confirm kalau memang belum boleh submit
+          if (selectedMatkul?.visible_time && new Date() < new Date(selectedMatkul.visible_time)) {
+            alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
+            return;
+          }
+
           const confirmSubmit = window.confirm("Apakah Anda yakin ingin mengirim soal ini?");
           if (confirmSubmit) handleSubmit(e);
         }}
@@ -139,6 +188,7 @@ export default function QuestionForm() {
           <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Mata Kuliah (Required)
           </label>
+
           <select
             value={selectedSubject}
             onChange={handleChangeSubject}
@@ -148,12 +198,39 @@ export default function QuestionForm() {
               focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           >
             <option value="">Select a subject</option>
-            {subjects.map((v) => (
-              <option key={v.id} value={String(v.id)}>
-                {v.name}
-              </option>
-            ))}
+
+            {subjects.map((v) => {
+              const now = new Date();
+              const start = v.visible_time ? new Date(v.visible_time) : null;
+              const end = v.invisible_time ? new Date(v.invisible_time) : null;
+
+              const isOngoing =
+                !!start && !!end && now >= start && now < end; // sedang berlangsung
+
+              const startLabel = start ? formatStartWIB(v.visible_time) : "";
+
+              const suffix = isOngoing
+                ? " - 🟢 Sedang berlangsung"
+                : startLabel
+                  ? ` - Dibuka ${startLabel}`
+                  : "";
+
+              return (
+                <option key={v.id} value={String(v.id)}>
+                  {v.name}
+                  {suffix}
+                </option>
+              );
+            })}
           </select>
+
+          {/* info tambahan (opsional, enak buat UX) */}
+          {selectedMatkul?.visible_time && (
+            <p className={`text-xs font-semibold ${isBeforeStart ? "text-red-600" : "text-green-600"}`}>
+              Mulai: {formatStartWIB(selectedMatkul.visible_time)}
+              {isBeforeStart ? " (belum dibuka)" : " (sudah dibuka)"}
+            </p>
+          )}
         </div>
 
         {/* Source */}
@@ -223,10 +300,12 @@ export default function QuestionForm() {
         <div className="mt-auto">
           <button
             type="submit"
+            disabled={!!selectedMatkul?.visible_time && new Date() < new Date(selectedMatkul.visible_time)}
             className="group w-full h-12 flex items-center justify-center gap-2 rounded-lg
               bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base
               transition-all active:scale-[0.98]
-              shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
+              shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30
+              disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:active:scale-100"
           >
             <span>Kirim Soal</span>
             <svg
