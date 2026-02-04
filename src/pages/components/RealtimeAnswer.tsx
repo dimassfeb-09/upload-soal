@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { MdTableChart } from "react-icons/md";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MdTableChart, MdArrowUpward, MdArrowDownward, MdRefresh } from "react-icons/md";
 import supabase from "../../utils/supabase";
 import { useSearchParams } from "react-router-dom";
-import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 
 interface Soal {
   id: number;
@@ -14,29 +13,39 @@ interface Soal {
   created_at: string;
 }
 
-export default function RealtimeAnswers({ isDark }: { isDark: boolean }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [questions, setQuestions] = useState<Soal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [refreshCountdown, setRefreshCountdown] = useState(15);
+export default function RealtimeAnswers() {
+  const REFRESH_SECONDS = 5;
   const itemsPerPage = 10;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const matkulId = searchParams.get("matkul_id");
-  const page = Number(searchParams.get("page")) || 1; // ambil langsung dari URL
+  const page = Math.max(Number(searchParams.get("page")) || 1, 1);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [questions, setQuestions] = useState<Soal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [refreshCountdown, setRefreshCountdown] = useState(REFRESH_SECONDS);
 
   const [matkulStatus, setMatkulStatus] = useState<"ok" | "hidden" | "noMatkul">(
     !matkulId ? "noMatkul" : "ok"
   );
+
+  const isFetchingRef = useRef(false);
+
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
 
   const fetchQuestions = async () => {
     if (!matkulId) {
       setMatkulStatus("noMatkul");
       setQuestions([]);
       setTotal(0);
+      setLoading(false);
       return;
     }
+
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
     try {
       setLoading(true);
@@ -50,7 +59,7 @@ export default function RealtimeAnswers({ isDark }: { isDark: boolean }) {
       if (matkulError || !matkulData?.is_visible) {
         setQuestions([]);
         setTotal(0);
-        setMatkulStatus(matkulError ? "hidden" : "hidden");
+        setMatkulStatus("hidden");
         return;
       }
 
@@ -67,7 +76,7 @@ export default function RealtimeAnswers({ isDark }: { isDark: boolean }) {
         .eq("matkul_id", parseInt(matkulId));
 
       if (searchTerm.trim()) {
-        query = query.ilike("question", `%${searchTerm}%`);
+        query = query.ilike("question", `%${searchTerm.trim()}%`);
       }
 
       const { data, error, count } = await query;
@@ -83,6 +92,7 @@ export default function RealtimeAnswers({ isDark }: { isDark: boolean }) {
       console.error("Unexpected error:", err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -104,168 +114,331 @@ export default function RealtimeAnswers({ isDark }: { isDark: boolean }) {
       if (error) return;
 
       fetchQuestions();
+      setRefreshCountdown(REFRESH_SECONDS);
     } catch (err) {
       console.error(err);
     }
   };
 
-  // fetchQuestions otomatis saat matkulId, page, atau searchTerm berubah
   useEffect(() => {
     fetchQuestions();
+    setRefreshCountdown(REFRESH_SECONDS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matkulId, page, searchTerm]);
 
-    let countdown = 15;
+  useEffect(() => {
+    let countdown = REFRESH_SECONDS;
     setRefreshCountdown(countdown);
 
     const interval = setInterval(() => {
       countdown -= 1;
       setRefreshCountdown(countdown);
+
       if (countdown <= 0) {
         fetchQuestions();
-        countdown = 15;
+        countdown = REFRESH_SECONDS;
         setRefreshCountdown(countdown);
       }
     }, 1000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matkulId, page, searchTerm]);
 
-  const totalPages = Math.ceil(total / itemsPerPage);
-
   const goToPage = (newPage: number) => {
-    const params: any = { page: String(newPage) };
+    const safePage = Math.min(Math.max(newPage, 1), totalPages);
+    const params: Record<string, string> = { page: String(safePage) };
     if (matkulId) params.matkul_id = matkulId;
     setSearchParams(params);
   };
 
-  return (
-    <div className={`${isDark ? "bg-gray-800" : "bg-white"} rounded-xl shadow-lg border ${isDark ? "border-gray-700" : "border-gray-200"} flex flex-col h-full overflow-hidden transition-colors duration-200 relative`}>
-      {/* Header */}
-      <div className={`p-6 border-b ${isDark ? "border-gray-700" : "border-gray-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
-        <div className="flex items-center gap-3">
-          <span className="text-teal-600 bg-teal-100 dark:bg-teal-900/30 p-2 rounded-lg">
-            <MdTableChart size={24} />
-          </span>
-          <div>
-            <h3 className={`text-lg font-bold leading-tight ${isDark ? "text-white" : "text-gray-900"}`}>Monitor Jawaban</h3>
-            <p className={`text-xs mt-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Diperbarui dalam {refreshCountdown} detik</p>
+  const pageItems = useMemo(() => {
+    const maxButtons = 7;
+    if (totalPages <= maxButtons) return Array.from({ length: totalPages }, (_, i) => i + 1);
+
+    const items: (number | "...")[] = [];
+    const left = Math.max(2, page - 1);
+    const right = Math.min(totalPages - 1, page + 1);
+
+    items.push(1);
+    if (left > 2) items.push("...");
+    for (let i = left; i <= right; i++) items.push(i);
+    if (right < totalPages - 1) items.push("...");
+    items.push(totalPages);
+
+    return items;
+  }, [page, totalPages]);
+
+  const CardRow = ({ q }: { q: Soal }) => {
+    const totalVotes = (q.correct_counts || 0) + (q.incorrect_counts || 0);
+    const correctPct = totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
+    const wrongPct = totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
+
+    return (
+      <div className="rounded-xl border p-4 bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                {q.answer}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">ID: {q.id}</span>
+            </div>
+
+            <div
+              className="mt-2 text-sm text-gray-900 dark:text-gray-100 leading-relaxed break-words"
+              dangerouslySetInnerHTML={{ __html: q.question }}
+            />
           </div>
         </div>
 
-        <div className="flex gap-2 flex-wrap mt-4 sm:mt-0">
+        <div className="mt-3">
+          <div className="h-2 w-full rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
+            <div className="h-full bg-teal-500" style={{ width: `${correctPct}%` }} />
+            <div className="h-full bg-red-500" style={{ width: `${wrongPct}%` }} />
+          </div>
+
+          <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+            <div className="flex gap-3">
+              <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-teal-500" />
+                {q.correct_counts} Correct
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-red-500" />
+                {q.incorrect_counts} Wrong
+              </span>
+            </div>
+            <span className="truncate max-w-[45%]">Sumber: {q.source || "-"}</span>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            className="flex items-center justify-center gap-1 px-3 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 active:scale-[0.99] transition"
+            onClick={() => vote(q.id, "correct")}
+          >
+            <MdArrowUpward /> Correct
+          </button>
+          <button
+            className="flex items-center justify-center gap-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 active:scale-[0.99] transition"
+            onClick={() => vote(q.id, "incorrect")}
+          >
+            <MdArrowDownward /> Wrong
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-xl shadow-lg border bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex flex-col overflow-hidden transition-colors duration-200 min-h-[420px]">
+      {/* Header */}
+      <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-teal-600 bg-teal-100 dark:bg-teal-900/30 p-2 rounded-lg">
+            <MdTableChart size={22} />
+          </span>
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+              Monitor Jawaban
+            </h3>
+            <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+              Auto refresh dalam {refreshCountdown} detik (tiap {REFRESH_SECONDS} detik)
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <input
             type="text"
             placeholder="Cari pertanyaan"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`px-3 py-2 rounded-lg border max-w-[500px] ${isDark ? "border-gray-600 bg-gray-700 text-white placeholder:text-gray-400" : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-400"}`}
+            className="w-full sm:w-[320px] md:w-[360px] lg:w-[420px] px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
           />
-          <button
-            onClick={() => fetchQuestions()}
-            className={`px-4 py-2 rounded-lg border ${isDark ? "border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600" : "border-gray-300 bg-white text-gray-900 hover:bg-gray-100"}`}
-          >
-            Cari
-          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                fetchQuestions();
+                setRefreshCountdown(REFRESH_SECONDS);
+              }}
+              className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+            >
+              Cari
+            </button>
+
+            <button
+              onClick={() => {
+                fetchQuestions();
+                setRefreshCountdown(REFRESH_SECONDS);
+              }}
+              className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+              title="Refresh sekarang"
+            >
+              <MdRefresh size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto relative">
-        <table className="w-full text-left border-collapse table-fixed">
-          <thead className={`${isDark ? "bg-gray-900/50" : "bg-gray-50"} sticky top-0 z-10 border-b ${isDark ? "border-gray-700" : "border-gray-200"}`}>
-            <tr>
-              <th className={`py-4 px-6 text-xs font-bold uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-600"} w-16`}>ID</th>
-              <th className={`py-4 px-6 text-xs font-bold uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-600"} w-20`}>Jawaban</th>
-              <th className={`py-4 px-6 text-xs font-bold uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-600"}`}>Pertanyaan</th>
-              <th className={`py-4 px-6 text-xs font-bold uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-600"} w-48`}>Vote</th>
-              <th className={`py-4 px-6 text-xs font-bold uppercase tracking-wider ${isDark ? "text-gray-400" : "text-gray-600"} w-48`}>Sumber / Pengirim</th>
-            </tr>
-          </thead>
-          <tbody className={`divide-y ${isDark ? "divide-gray-700" : "divide-gray-200"}`}>
-            {questions.map((q) => {
-              const totalVotes = q.correct_counts + q.incorrect_counts;
-              return (
-                <tr key={q.id} className={`${isDark ? "hover:bg-gray-700/50" : "hover:bg-gray-50"} transition-colors group`}>
-                  <td className={`py-4 px-6 text-sm font-medium ${isDark ? "text-gray-400" : "text-gray-600"} align-top`}>{q.id}</td>
-                  <td className="py-4 px-6 align-top">
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>{q.answer}</span>
-                  </td>
-                  <td className={`py-4 px-6 text-sm ${isDark ? "text-white" : "text-gray-900"} align-top`} dangerouslySetInnerHTML={{ __html: q.question }} />
-                  <td className="py-4 px-6 flex flex-col gap-1.5 w-full align-top">
-                    <div className={`h-2 w-full rounded-full overflow-hidden flex ${isDark ? "bg-gray-700" : "bg-gray-200"}`}>
-                      <div className="h-full bg-teal-500" style={{ width: `${totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0}%` }} />
-                      <div className="h-full bg-red-500" style={{ width: `${totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0}%` }} />
-                    </div>
-                    <div className={`flex gap-3 text-[10px] mt-0.5 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                      <span className="flex items-center gap-1">
-                        <span className="size-1.5 rounded-full bg-teal-500" />
-                        {q.correct_counts} Correct
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="size-1.5 rounded-full bg-red-500" />
-                        {q.incorrect_counts} Wrong
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 align-top flex flex-col gap-2">
-                    <button
-                      className="flex items-center gap-1 px-3 py-1 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
-                      onClick={() => vote(q.id, "correct")}
-                    >
-                      <MdArrowUpward /> Correct
-                    </button>
-                    <button
-                      className="flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                      onClick={() => vote(q.id, "incorrect")}
-                    >
-                      <MdArrowDownward /> Wrong
-                    </button>
-                  </td>
-                  <td className={`py-4 px-6 text-sm font-medium ${isDark ? "text-gray-400" : "text-gray-600"} align-top`}>{q.source}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-      {(matkulStatus === "hidden" || matkulStatus === "noMatkul") && (
-        <div className="absolute inset-0 bg-white/40 dark:bg-gray-800/40 backdrop-blur-md flex items-center justify-center z-20 shadow-inner rounded-lg p-4">
-          <span className="text-gray-700 dark:text-gray-200 font-semibold text-lg text-center leading-relaxed">
-            {matkulStatus === "hidden"
-              ? "Mata kuliah ini tidak tersedia atau disembunyikan."
-              : "Silahkan pilih mata kuliah terlebih dahulu."}
-          </span>
+      {/* Content */}
+      <div className="relative flex-1 overflow-hidden">
+        {/* Mobile cards */}
+        <div className="block md:hidden p-3 sm:p-4 overflow-auto h-full">
+          <div className="flex flex-col gap-3">
+            {questions.map((q) => (
+              <CardRow key={q.id} q={q} />
+            ))}
+          </div>
         </div>
-      )}
 
+        {/* Table (md+) */}
+        <div className="hidden md:block h-full overflow-auto">
+          <div className="min-w-[980px]">
+            <table className="w-full text-left border-collapse table-fixed">
+              <thead className="bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 w-16">
+                    ID
+                  </th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 w-20">
+                    Jawaban
+                  </th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                    Pertanyaan
+                  </th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 w-56">
+                    Vote
+                  </th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 w-64">
+                    Action
+                  </th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 w-56">
+                    Sumber / Pengirim
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {questions.map((q) => {
+                  const totalVotes = (q.correct_counts || 0) + (q.incorrect_counts || 0);
+                  const correctPct = totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
+                  const wrongPct = totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
+
+                  return (
+                    <tr key={q.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td className="py-4 px-6 text-sm font-medium text-gray-600 dark:text-gray-400 align-top">
+                        {q.id}
+                      </td>
+
+                      <td className="py-4 px-6 align-top">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                          {q.answer}
+                        </span>
+                      </td>
+
+                      <td
+                        className="py-4 px-6 text-sm text-gray-900 dark:text-white align-top break-words"
+                        dangerouslySetInnerHTML={{ __html: q.question }}
+                      />
+
+                      <td className="py-4 px-6 align-top">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="h-2 w-full rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
+                            <div className="h-full bg-teal-500" style={{ width: `${correctPct}%` }} />
+                            <div className="h-full bg-red-500" style={{ width: `${wrongPct}%` }} />
+                          </div>
+                          <div className="flex gap-3 text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <span className="size-1.5 rounded-full bg-teal-500" />
+                              {q.correct_counts} Correct
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="size-1.5 rounded-full bg-red-500" />
+                              {q.incorrect_counts} Wrong
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 align-top">
+                        <div className="flex flex-col lg:flex-row gap-2">
+                          <button
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition"
+                            onClick={() => vote(q.id, "correct")}
+                          >
+                            <MdArrowUpward /> Correct
+                          </button>
+                          <button
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                            onClick={() => vote(q.id, "incorrect")}
+                          >
+                            <MdArrowDownward /> Wrong
+                          </button>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 text-sm font-medium text-gray-600 dark:text-gray-400 align-top break-words">
+                        {q.source || "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {(matkulStatus === "hidden" || matkulStatus === "noMatkul") && (
+          <div className="absolute inset-0 bg-white/40 dark:bg-gray-800/40 backdrop-blur-md flex items-center justify-center z-20 shadow-inner rounded-lg p-4">
+            <span className="text-gray-700 dark:text-gray-200 font-semibold text-base sm:text-lg text-center leading-relaxed">
+              {matkulStatus === "hidden"
+                ? "Mata kuliah ini tidak tersedia atau disembunyikan."
+                : "Silahkan pilih mata kuliah terlebih dahulu."}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Footer pagination */}
-      <div className={`p-4 border-t ${isDark ? "border-gray-700" : "border-gray-200"} flex flex-col sm:flex-row justify-between items-center gap-2`}>
-        <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+      <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
           Menampilkan {(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, total)} dari {total} soal
         </span>
 
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap justify-center sm:justify-end">
           <button
-            className={`px-3 py-1 rounded-lg border ${isDark ? "border-gray-600 hover:bg-gray-700 text-gray-400" : "border-gray-300 hover:bg-gray-100 text-gray-600"} disabled:opacity-50`}
+            className="px-3 py-1 rounded-lg border text-sm border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
             disabled={page === 1 || loading}
             onClick={() => goToPage(page - 1)}
           >
             Previous
           </button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((i) => (
-            <button
-              key={i}
-              className={`px-3 py-1 rounded-lg border ${i === page ? "bg-blue-500 text-white" : isDark ? "border-gray-600 text-gray-400 hover:bg-gray-700" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
-              onClick={() => goToPage(i)}
-            >
-              {i}
-            </button>
-          ))}
+          {pageItems.map((it, idx) =>
+            it === "..." ? (
+              <span key={`dots-${idx}`} className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">
+                …
+              </span>
+            ) : (
+              <button
+                key={it}
+                className={`px-3 py-1 rounded-lg border text-sm ${
+                  it === page
+                    ? "bg-blue-500 text-white border-blue-500"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                }`}
+                onClick={() => goToPage(it)}
+              >
+                {it}
+              </button>
+            )
+          )}
 
           <button
-            className={`px-3 py-1 rounded-lg border ${isDark ? "border-gray-600 hover:bg-gray-700 text-gray-400" : "border-gray-300 hover:bg-gray-100 text-gray-600"} disabled:opacity-50`}
+            className="px-3 py-1 rounded-lg border text-sm border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
             disabled={page >= totalPages || loading}
             onClick={() => goToPage(page + 1)}
           >

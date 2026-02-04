@@ -1,1 +1,4 @@
 @import "tailwindcss";
+
+/* ✅ ini yang bikin dark: aktif saat ada class .dark di HTML */
+@custom-variant dark (&:where(.dark, .dark *));

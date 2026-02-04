@@ -3,16 +3,11 @@ import { MdEditDocument } from "react-icons/md";
 import supabase from "../../utils/supabase";
 import { useLocation, useNavigate } from "react-router-dom";
 
-interface QuestionFormProps {
-  isDark: boolean;
-}
-
-export default function QuestionForm({ isDark }: QuestionFormProps) {
+export default function QuestionForm() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Ambil subject awal dari URL (?matkul_id=...) atau localStorage
   const initialSubject = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const fromUrl = params.get("matkul_id");
@@ -22,7 +17,6 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
     return fromStorage ?? "";
   }, []);
 
-  // State untuk form
   const [selectedSubject, setSelectedSubject] = useState<string>(initialSubject);
   const [source, setSource] = useState<string>("");
   const [question, setQuestion] = useState<string>("");
@@ -33,14 +27,12 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Kalau URL berubah (mis. user klik back/forward), sinkronkan state selectedSubject
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const urlSubject = params.get("matkul_id") ?? "";
 
     setSelectedSubject(urlSubject);
 
-    // sync juga ke localStorage biar persist saat refresh
     if (urlSubject) localStorage.setItem("selected_matkul_id", urlSubject);
     else localStorage.removeItem("selected_matkul_id");
   }, [location.search]);
@@ -76,7 +68,7 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
       return;
     }
 
-    const subjectId = selectedSubject; // simpan dulu biar aman
+    const subjectId = selectedSubject;
 
     try {
       const formattedQuestion = question.replace(/\n/g, "<br>");
@@ -84,7 +76,7 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
       const { error } = await supabase.from("soal").insert([
         {
           matkul_id: subjectId,
-          source: source,
+          source,
           question: formattedQuestion,
           answer: selectedAnswer,
         },
@@ -94,14 +86,13 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
 
       alert("Soal berhasil dikirim!");
 
-      // Reset field lain, tapi JANGAN reset subject
       setQuestion("");
       setSelectedAnswer("");
       setSource("");
 
-      // Pastikan URL tetap punya matkul_id
       const params = new URLSearchParams(location.search);
       params.set("matkul_id", subjectId);
+      params.set("page", "1");
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     } catch (err) {
       console.error(err);
@@ -110,92 +101,64 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
   };
 
   const handleChangeSubject = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value; // string
+    const value = e.target.value;
     setSelectedSubject(value);
 
-    // persist ke localStorage biar tetap saat refresh
     if (value) localStorage.setItem("selected_matkul_id", value);
     else localStorage.removeItem("selected_matkul_id");
 
     const searchParams = new URLSearchParams(location.search);
-    if (value) {
-      searchParams.set("matkul_id", value);
-    } else {
-      searchParams.delete("matkul_id");
-    }
+    if (value) searchParams.set("matkul_id", value);
+    else searchParams.delete("matkul_id");
 
-    // Set page kembali ke 0
-    searchParams.set("page", "0");
+    // ✅ jangan 0, harus 1
+    searchParams.set("page", "1");
 
-    // Update URL tanpa reload
-    navigate(
-      { pathname: location.pathname, search: searchParams.toString() },
-      { replace: true }
-    );
+    navigate({ pathname: location.pathname, search: searchParams.toString() }, { replace: true });
   };
 
   return (
-    <div
-      className={`${
-        isDark ? "bg-gray-800" : "bg-white"
-      } rounded-xl shadow-lg border ${
-        isDark ? "border-gray-700" : "border-gray-200"
-      } p-6 flex flex-col h-full transition-colors duration-200`}
-    >
-      <div
-        className={`flex items-center gap-3 mb-6 pb-4 border-b ${
-          isDark ? "border-gray-700" : "border-gray-200"
-        }`}
-      >
+    <div className="rounded-xl shadow-lg border bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700 p-4 sm:p-6 flex flex-col transition-colors duration-200 min-h-[420px]">
+      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-200 dark:border-gray-700">
         <span className="text-blue-600 bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
-          <MdEditDocument size={24} />
+          <MdEditDocument size={22} />
         </span>
-        <h3
-          className={`text-lg font-bold leading-tight tracking-[-0.015em] ${
-            isDark ? "text-white" : "text-gray-900"
-          }`}
-        >
-          Soal
-        </h3>
+        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Soal</h3>
       </div>
 
       <form
-        className="flex flex-col gap-5 h-full"
+        className="flex flex-col gap-4 sm:gap-5 h-full"
         onSubmit={(e) => {
           e.preventDefault();
           const confirmSubmit = window.confirm("Apakah Anda yakin ingin mengirim soal ini?");
-          if (confirmSubmit) {
-            handleSubmit(e);
-          }
+          if (confirmSubmit) handleSubmit(e);
         }}
       >
+        {/* Subject */}
         <div className="flex flex-col gap-2">
-          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+          <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Mata Kuliah (Required)
           </label>
-          <div className="relative">
-            <select
-              value={selectedSubject}
-              onChange={handleChangeSubject}
-              className={`w-full appearance-none rounded-lg border ${
-                isDark
-                  ? "border-gray-600 bg-gray-700 text-white hover:border-blue-500"
-                  : "border-gray-300 bg-white text-gray-900 hover:border-blue-400"
-              } px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer`}
-            >
-              <option value="">Select a subject</option>
-              {subjects.map((v) => (
-                <option key={v.id} value={String(v.id)}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={selectedSubject}
+            onChange={handleChangeSubject}
+            className="w-full appearance-none rounded-lg border px-4 py-3 text-sm sm:text-base transition-all cursor-pointer
+              border-gray-300 bg-white text-gray-900 hover:border-blue-400
+              dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:border-blue-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+          >
+            <option value="">Select a subject</option>
+            {subjects.map((v) => (
+              <option key={v.id} value={String(v.id)}>
+                {v.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Source */}
         <div className="flex flex-col gap-2">
-          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+          <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Sumber / Pengirim (Optional)
           </label>
           <input
@@ -203,36 +166,36 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
             value={source}
             onChange={(e) => setSource(e.target.value)}
             placeholder="e.g. Dr. Smith, Textbook Vol 2"
-            className={`w-full rounded-lg border ${
-              isDark
-                ? "border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 hover:border-blue-500"
-                : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400"
-            } px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all`}
+            className="w-full rounded-lg border px-4 py-3 text-sm sm:text-base transition-all
+              border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400
+              dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-blue-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
         </div>
 
+        {/* Question */}
         <div className="flex flex-col gap-2 grow">
-          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+          <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Konten Pertanyaan
           </label>
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Write your question here..."
-            className={`w-full flex-1 min-h-[140px] rounded-lg border ${
-              isDark
-                ? "border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 hover:border-blue-500"
-                : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400"
-            } px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-y`}
+            className="w-full flex-1 min-h-[140px] rounded-lg border px-4 py-3 text-sm sm:text-base resize-y transition-all
+              border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400
+              dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-blue-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
         </div>
 
-        {/* Answer Key */}
-        <div className="flex flex-col gap-3 pt-2">
-          <label className={`text-sm font-semibold ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+        {/* Answer */}
+        <div className="flex flex-col gap-3 pt-1">
+          <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Jawaban Benar
           </label>
-          <div className="grid grid-cols-4 gap-3">
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {["A", "B", "C", "D"].map((letter) => (
               <label key={letter} className="cursor-pointer group relative">
                 <input
@@ -244,11 +207,10 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
                   className="peer sr-only"
                 />
                 <div
-                  className={`flex h-12 items-center justify-center rounded-lg border ${
-                    isDark
-                      ? "border-gray-600 bg-gray-700 text-gray-400 hover:bg-gray-600"
-                      : "border-gray-300 bg-white text-gray-500 hover:bg-gray-50"
-                  } text-lg font-bold transition-all peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-600 shadow-sm hover:border-blue-400`}
+                  className="flex h-12 items-center justify-center rounded-lg border text-lg font-bold transition-all shadow-sm
+                    border-gray-300 bg-white text-gray-600 hover:bg-gray-50 hover:border-blue-400
+                    dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600
+                    peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-600"
                 >
                   {letter}
                 </div>
@@ -257,10 +219,14 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
           </div>
         </div>
 
-        <div className="pt-0 mt-auto">
+        {/* Submit */}
+        <div className="mt-auto">
           <button
             type="submit"
-            className="group w-full h-12 flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-base transition-all active:scale-[0.98] shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
+            className="group w-full h-12 flex items-center justify-center gap-2 rounded-lg
+              bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base
+              transition-all active:scale-[0.98]
+              shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
           >
             <span>Kirim Soal</span>
             <svg
@@ -272,20 +238,19 @@ export default function QuestionForm({ isDark }: QuestionFormProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
           </button>
-        </div>
 
-        <div className="text-center">
-          <span
-            onClick={() => {
-              setSource("");
-              setQuestion("");
-              setSelectedAnswer("");
-              // sengaja tidak reset subject
-            }}
-            className="text-red-600 dark:text-red-400 cursor-pointer hover:underline font-semibold"
-          >
-            Hapus Semua Field
-          </span>
+          <div className="text-center mt-3">
+            <span
+              onClick={() => {
+                setSource("");
+                setQuestion("");
+                setSelectedAnswer("");
+              }}
+              className="text-red-600 dark:text-red-400 cursor-pointer hover:underline font-semibold text-sm"
+            >
+              Hapus Semua Field
+            </span>
+          </div>
         </div>
       </form>
     </div>

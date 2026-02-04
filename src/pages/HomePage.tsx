@@ -1,26 +1,25 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MdDarkMode, MdLightMode } from "react-icons/md";
 import QuestionForm from "./components/QuestionForm";
 import RealtimeAnswers from "./components/RealtimeAnswer";
 
 export default function HomePage() {
   const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("isDark");
-      return stored === "true";
-    }
-    return false;
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("theme") === "dark";
   });
 
   useEffect(() => {
-    localStorage.setItem("isDark", String(isDark));
+    // ✅ toggle class dark di <html>
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("theme", isDark ? "dark" : "light");
   }, [isDark]);
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-100'} transition-colors duration-200`}>
-      <div className="flex flex-col h-screen max-h-[95vh] p-6 lg:p-10 w-full max-w-[1600px] mx-auto">
-        <div className="flex items-center justify-between mb-6 gap-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+    <div className="min-h-dvh bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
+      <div className="mx-auto w-full max-w-screen-2xl px-3 sm:px-4 md:px-6 lg:px-8 2xl:px-10 py-4 sm:py-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4 sm:mb-6">
+          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
             Untuk dapat copy-paste soal, kamu dapat gunakan ekstensi ini:{" "}
             <a
               href="https://chrome.google.com/webstore/detail/enable-right-click-allow/mlloloooolpffjkjaclpfpeednngpjon"
@@ -33,12 +32,14 @@ export default function HomePage() {
           </div>
 
           <button
-            onClick={() => setIsDark(!isDark)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-              isDark
-                ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700 border border-gray-700'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm'
-            }`}
+            onClick={() => setIsDark((v) => !v)}
+            className="
+              flex items-center justify-center gap-2
+              w-full sm:w-auto px-4 py-2 rounded-lg font-medium
+              transition-all border shadow-sm
+              bg-white text-gray-700 border-gray-200 hover:bg-gray-50
+              dark:bg-gray-800 dark:text-yellow-400 dark:border-gray-700 dark:hover:bg-gray-700
+            "
           >
             {isDark ? (
               <>
@@ -54,14 +55,12 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 h-full">
-          <div className="lg:col-span-3 h-full overflow-auto">
-            <QuestionForm isDark={isDark} />
+        <div className="grid gap-4 sm:gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-12 min-h-[calc(100dvh-140px)]">
+          <div className="lg:col-span-4 xl:col-span-3">
+            <QuestionForm />
           </div>
-
-          <div className="lg:col-span-9 flex flex-col h-full overflow-auto">
-            <RealtimeAnswers isDark={isDark} />
+          <div className="lg:col-span-8 xl:col-span-9">
+            <RealtimeAnswers />
           </div>
         </div>
       </div>
