@@ -36,9 +36,9 @@ export default function RealtimeAnswers() {
   const [total, setTotal] = useState(0);
   const [refreshCountdown, setRefreshCountdown] = useState(REFRESH_SECONDS);
 
-  const [matkulStatus, setMatkulStatus] = useState<"ok" | "hidden" | "noMatkul">(
-    !matkulId ? "noMatkul" : "ok"
-  );
+  const [matkulStatus, setMatkulStatus] = useState<
+    "ok" | "hidden" | "noMatkul"
+  >(!matkulId ? "noMatkul" : "ok");
 
   const isFetchingRef = useRef(false);
 
@@ -115,11 +115,16 @@ export default function RealtimeAnswers() {
 
       if (fetchError) return;
 
-      const updates: { correct_counts?: number; incorrect_counts?: number } = {};
-      if (type === "correct") updates.correct_counts = (currentData?.correct_counts || 0) + 1;
+      const updates: { correct_counts?: number; incorrect_counts?: number } =
+        {};
+      if (type === "correct")
+        updates.correct_counts = (currentData?.correct_counts || 0) + 1;
       else updates.incorrect_counts = (currentData?.incorrect_counts || 0) + 1;
 
-      const { error } = await supabase.from("soal").update(updates).eq("id", id);
+      const { error } = await supabase
+        .from("soal")
+        .update(updates)
+        .eq("id", id);
       if (error) return;
 
       fetchQuestions();
@@ -135,7 +140,10 @@ export default function RealtimeAnswers() {
       const doc = new DOMParser().parseFromString(html, "text/html");
       return (doc.body?.textContent || "").trim();
     } catch {
-      return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      return html
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
     }
   };
 
@@ -218,7 +226,8 @@ export default function RealtimeAnswers() {
 
   const pageItems = useMemo(() => {
     const maxButtons = 7;
-    if (totalPages <= maxButtons) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (totalPages <= maxButtons)
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
 
     const items: (number | "...")[] = [];
     const left = Math.max(2, page - 1);
@@ -235,8 +244,10 @@ export default function RealtimeAnswers() {
 
   const CardRow = ({ q }: { q: Soal }) => {
     const totalVotes = (q.correct_counts || 0) + (q.incorrect_counts || 0);
-    const correctPct = totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
-    const wrongPct = totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
+    const correctPct =
+      totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
+    const wrongPct =
+      totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
 
     return (
       <div className="rounded-xl border p-4 bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -246,7 +257,9 @@ export default function RealtimeAnswers() {
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                 {q.answer}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">ID: {q.id}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                ID: {q.id}
+              </span>
             </div>
 
             <div
@@ -258,8 +271,14 @@ export default function RealtimeAnswers() {
 
         <div className="mt-3">
           <div className="h-2 w-full rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
-            <div className="h-full bg-teal-500" style={{ width: `${correctPct}%` }} />
-            <div className="h-full bg-red-500" style={{ width: `${wrongPct}%` }} />
+            <div
+              className="h-full bg-teal-500"
+              style={{ width: `${correctPct}%` }}
+            />
+            <div
+              className="h-full bg-red-500"
+              style={{ width: `${wrongPct}%` }}
+            />
           </div>
 
           <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
@@ -273,7 +292,9 @@ export default function RealtimeAnswers() {
                 {q.incorrect_counts} Wrong
               </span>
             </div>
-            <span className="truncate max-w-[45%]">Sumber: {q.source || "-"}</span>
+            <span className="truncate max-w-[45%]">
+              Sumber: {q.source || "-"}
+            </span>
           </div>
         </div>
 
@@ -343,7 +364,8 @@ export default function RealtimeAnswers() {
               Monitor Jawaban
             </h3>
             <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
-              Auto refresh dalam {refreshCountdown} detik (tiap {REFRESH_SECONDS} detik)
+              Auto refresh dalam {refreshCountdown} detik (tiap{" "}
+              {REFRESH_SECONDS} detik)
             </p>
           </div>
         </div>
@@ -422,12 +444,20 @@ export default function RealtimeAnswers() {
 
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {questions.map((q) => {
-                  const totalVotes = (q.correct_counts || 0) + (q.incorrect_counts || 0);
-                  const correctPct = totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
-                  const wrongPct = totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
+                  const totalVotes =
+                    (q.correct_counts || 0) + (q.incorrect_counts || 0);
+                  const correctPct =
+                    totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
+                  const wrongPct =
+                    totalVotes > 0
+                      ? (q.incorrect_counts / totalVotes) * 100
+                      : 0;
 
                   return (
-                    <tr key={q.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <tr
+                      key={q.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    >
                       <td className="py-4 px-6 text-sm font-medium text-gray-600 dark:text-gray-400 align-top">
                         {q.id}
                       </td>
@@ -438,7 +468,6 @@ export default function RealtimeAnswers() {
                         </span>
                       </td>
 
-                      {/* Pertanyaan + Copy button di kolom ini (sesuai request) */}
                       <td className="py-4 px-6 text-sm text-gray-900 dark:text-white align-top break-words">
                         <div className="flex items-start gap-2">
                           <div
@@ -456,42 +485,48 @@ export default function RealtimeAnswers() {
                       </td>
 
                       <td className="py-4 px-6 align-top">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="h-2 w-full rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
-                            <div className="h-full bg-teal-500" style={{ width: `${correctPct}%` }} />
-                            <div className="h-full bg-red-500" style={{ width: `${wrongPct}%` }} />
+                        <div className="flex flex-col gap-5">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="h-2 w-full rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
+                              <div
+                                className="h-full bg-teal-500"
+                                style={{ width: `${correctPct}%` }}
+                              />
+                              <div
+                                className="h-full bg-red-500"
+                                style={{ width: `${wrongPct}%` }}
+                              />
+                            </div>
+                            <div className="flex gap-3 text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <span className="size-1.5 rounded-full bg-teal-500" />
+                                {q.correct_counts} Correct
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="size-1.5 rounded-full bg-red-500" />
+                                {q.incorrect_counts} Wrong
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex gap-3 text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">
-                            <span className="flex items-center gap-1">
-                              <span className="size-1.5 rounded-full bg-teal-500" />
-                              {q.correct_counts} Correct
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="size-1.5 rounded-full bg-red-500" />
-                              {q.incorrect_counts} Wrong
-                            </span>
+
+                          <div className="flex flex-col lg:flex-row gap-2">
+                            <button
+                              className="flex items-center justify-center gap-1 px-3 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition"
+                              onClick={() => vote(q.id, "correct")}
+                            >
+                              <MdArrowUpward /> Correct
+                            </button>
+                            <button
+                              className="flex items-center justify-center gap-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                              onClick={() => vote(q.id, "incorrect")}
+                            >
+                              <MdArrowDownward /> Wrong
+                            </button>
                           </div>
                         </div>
                       </td>
 
                       <td className="py-4 px-6 align-top">
-                        {/* Base vote buttons (tetap) */}
-                        <div className="flex flex-col lg:flex-row gap-2">
-                          <button
-                            className="flex items-center justify-center gap-1 px-3 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition"
-                            onClick={() => vote(q.id, "correct")}
-                          >
-                            <MdArrowUpward /> Correct
-                          </button>
-                          <button
-                            className="flex items-center justify-center gap-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                            onClick={() => vote(q.id, "incorrect")}
-                          >
-                            <MdArrowDownward /> Wrong
-                          </button>
-                        </div>
-
-                        {/* ADDED: Ask buttons */}
                         <div className="mt-2 grid grid-cols-2 gap-2">
                           <button
                             className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
@@ -544,7 +579,8 @@ export default function RealtimeAnswers() {
       {/* Footer pagination */}
       <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-3">
         <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-          Menampilkan {(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, total)} dari {total} soal
+          Menampilkan {(page - 1) * itemsPerPage + 1}-
+          {Math.min(page * itemsPerPage, total)} dari {total} soal
         </span>
 
         <div className="flex gap-1 flex-wrap justify-center sm:justify-end">
@@ -558,7 +594,10 @@ export default function RealtimeAnswers() {
 
           {pageItems.map((it, idx) =>
             it === "..." ? (
-              <span key={`dots-${idx}`} className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">
+              <span
+                key={`dots-${idx}`}
+                className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400"
+              >
                 …
               </span>
             ) : (
@@ -573,7 +612,7 @@ export default function RealtimeAnswers() {
               >
                 {it}
               </button>
-            )
+            ),
           )}
 
           <button
