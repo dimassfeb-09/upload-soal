@@ -42,6 +42,15 @@ export default function RealtimeAnswers() {
 
   const isFetchingRef = useRef(false);
 
+  // ref input search (untuk CTRL+F / CMD+F)
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ref untuk akses nilai searchTerm terbaru di event handler (hindari dependency effect)
+  const searchTermRef = useRef(searchTerm);
+  useEffect(() => {
+    searchTermRef.current = searchTerm;
+  }, [searchTerm]);
+
   const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
 
   const fetchQuestions = async () => {
@@ -121,10 +130,7 @@ export default function RealtimeAnswers() {
         updates.correct_counts = (currentData?.correct_counts || 0) + 1;
       else updates.incorrect_counts = (currentData?.incorrect_counts || 0) + 1;
 
-      const { error } = await supabase
-        .from("soal")
-        .update(updates)
-        .eq("id", id);
+      const { error } = await supabase.from("soal").update(updates).eq("id", id);
       if (error) return;
 
       fetchQuestions();
@@ -134,7 +140,7 @@ export default function RealtimeAnswers() {
     }
   };
 
-  /** ===================== ADDED: WEB-APP SAFE "ASK" + COPY ===================== */
+  /** ===================== WEB-APP SAFE "ASK" + COPY ===================== */
   const htmlToPlainText = (html: string) => {
     try {
       const doc = new DOMParser().parseFromString(html, "text/html");
@@ -154,7 +160,6 @@ export default function RealtimeAnswers() {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      // fallback (jarang dipakai)
       const ta = document.createElement("textarea");
       ta.value = text;
       ta.style.position = "fixed";
@@ -173,11 +178,12 @@ export default function RealtimeAnswers() {
   const askGoogle = (questionHtml: string) => {
     const qText = htmlToPlainText(questionHtml);
     if (!qText) return;
-    const url = `https://www.google.com/search?hl=id&q=${encodeURIComponent(qText)}`;
+    const url = `https://www.google.com/search?hl=id&q=${encodeURIComponent(
+      qText,
+    )}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  // Prefill only (tidak auto-send)
   const askChatGPT = (questionHtml: string) => {
     const prompt = htmlToPlainText(questionHtml);
     if (!prompt) return;
@@ -185,12 +191,62 @@ export default function RealtimeAnswers() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  // Gemini: tidak ada prefill URL yang native/andal -> open + copy agar tinggal paste
   const askGemini = async (questionHtml: string) => {
     await copyPrompt(questionHtml);
     window.open("https://gemini.google.com/", "_blank", "noopener,noreferrer");
   };
-  /** ========================================================================== */
+  /** =================================================================== */
+
+  /** ===================== CTRL/CMD+F: FOCUS + AUTO PASTE CLIPBOARD ===================== */
+  const normalizeClipboardText = (t: string) => t.replace(/\s+/g, " ").trim();
+
+  const focusAndSelectSearch = () => {
+    searchInputRef.current?.focus();
+    // select text biar langsung replace
+    setTimeout(() => searchInputRef.current?.select(), 0);
+  };
+
+  const tryPasteClipboardReplaceSearch = async () => {
+    // readText butuh secure context + izin browser
+    if (!navigator.clipboard?.readText) return false;
+
+    try {
+      const text = normalizeClipboardText(await navigator.clipboard.readText());
+      if (!text) return false;
+
+      // RULE: kalau input ada isinya, clear lalu replace
+      // (setSearchTerm langsung replace saja sudah cukup)
+      setSearchTerm(text);
+
+      // select lagi setelah value berubah
+      requestAnimationFrame(() => searchInputRef.current?.select());
+      return true;
+    } catch {
+      // permission ditolak
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const key = e.key?.toLowerCase();
+      const isFind = (e.ctrlKey || e.metaKey) && key === "f";
+      if (!isFind) return;
+
+      e.preventDefault();
+
+      // fokus + select dulu
+      focusAndSelectSearch();
+
+      // coba auto paste clipboard (kalau diizinkan)
+      // kalau gagal (permission), tetap fokus/select saja (user bisa Ctrl+V)
+      void tryPasteClipboardReplaceSearch();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+  /** =================================================================== */
 
   useEffect(() => {
     fetchQuestions();
@@ -292,9 +348,7 @@ export default function RealtimeAnswers() {
                 {q.incorrect_counts} Wrong
               </span>
             </div>
-            <span className="truncate max-w-[45%]">
-              Sumber: {q.source || "-"}
-            </span>
+            <span className="truncate max-w-[45%]">Sumber: {q.source || "-"}</span>
           </div>
         </div>
 
@@ -313,7 +367,6 @@ export default function RealtimeAnswers() {
           </button>
         </div>
 
-        {/* ADDED: Ask buttons + copy (mobile) */}
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
@@ -372,24 +425,30 @@ export default function RealtimeAnswers() {
 
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="Cari pertanyaan"
+            placeholder="Cari (CTRL + F / COMMAND + F)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:w-[320px] md:w-[360px] lg:w-[420px] px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
           />
 
           <div className="flex gap-2">
+            {/* Clear */}
             <button
               onClick={() => {
-                fetchQuestions();
+                setSearchTerm("");
+                goToPage(1);
                 setRefreshCountdown(REFRESH_SECONDS);
               }}
-              className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+              disabled={!searchTerm.trim() || loading}
+              className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition disabled:opacity-50"
+              title="Kosongkan pencarian"
             >
-              Cari
+              Clear
             </button>
 
+            {/* Refresh */}
             <button
               onClick={() => {
                 fetchQuestions();

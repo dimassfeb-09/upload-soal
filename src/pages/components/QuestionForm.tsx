@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MdEditDocument } from "react-icons/md";
 import supabase from "../../utils/supabase";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -17,12 +17,21 @@ export default function QuestionForm() {
     return fromStorage ?? "";
   }, []);
 
-  const [selectedSubject, setSelectedSubject] = useState<string>(initialSubject);
+  const [selectedSubject, setSelectedSubject] =
+    useState<string>(initialSubject);
   const [source, setSource] = useState<string>("");
   const [question, setQuestion] = useState<string>("");
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
 
-  // --- helper: format visible_time ke WIB untuk ditampilkan di option ---
+  // ref textarea + notif kecil
+  const questionRef = useRef<HTMLTextAreaElement>(null);
+  const [notif, setNotif] = useState<string>("");
+  const showNotif = (msg: string) => {
+    setNotif(msg);
+    window.setTimeout(() => setNotif(""), 2000);
+  };
+
+  // helper: format visible_time ke WIB untuk ditampilkan di option
   const formatStartWIB = (iso?: string | null) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -37,29 +46,50 @@ export default function QuestionForm() {
     return `${formatter.format(d)} WIB`;
   };
 
-  // --- ambil data matkul yang belum lewat invisible_time (atau invisible_time null) ---
+  // ambil data matkul yang belum lewat invisible_time (atau invisible_time null)
   const fetchSubjects = async () => {
-  try {
-    const nowIso = new Date().toISOString();
+    try {
+      const nowIso = new Date().toISOString();
 
-    const { data, error } = await supabase
-      .from("matkul")
-      .select("*")
-      .eq("is_visible", true)
-      .or(`invisible_time.is.null,invisible_time.gt.${nowIso}`)
-      .order("visible_time", { ascending: true, nullsFirst: false })
-      .order("name", { ascending: true });
+      const { data, error } = await supabase
+        .from("matkul")
+        .select("*")
+        .eq("is_visible", true)
+        .or(`invisible_time.is.null,invisible_time.gt.${nowIso}`)
+        .order("visible_time", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching subjects:", error);
-      return;
+      if (error) {
+        console.error("Error fetching subjects:", error);
+        return;
+      }
+
+      setSubjects(data || []);
+    } catch (err) {
+      console.error("Unexpected error:", err);
     }
+  };
 
-    setSubjects(data || []);
-  } catch (err) {
-    console.error("Unexpected error:", err);
-  }
-};
+  useEffect(() => {
+    const onGlobalKeyDown = (e: KeyboardEvent) => {
+      const key = e.key?.toLowerCase();
+      const isShortcut = (e.ctrlKey || e.metaKey) && e.shiftKey && key === "e";
+
+      if (!isShortcut) return;
+
+      e.preventDefault();
+
+      // Fokus ke textarea pertanyaan dulu
+      questionRef.current?.focus();
+
+      // Lalu paste clipboard
+      void pasteClipboardIntoTextarea();
+    };
+
+    window.addEventListener("keydown", onGlobalKeyDown);
+    return () => window.removeEventListener("keydown", onGlobalKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchSubjects();
@@ -76,13 +106,13 @@ export default function QuestionForm() {
     else localStorage.removeItem("selected_matkul_id");
   }, [location.search]);
 
-  // --- cari matkul terpilih + cek apakah sudah mulai ---
+  // cari matkul terpilih + cek apakah sudah mulai
   const selectedMatkul = useMemo(() => {
     return subjects.find((s) => String(s.id) === String(selectedSubject));
   }, [subjects, selectedSubject]);
 
   const isBeforeStart = useMemo(() => {
-    if (!selectedMatkul?.visible_time) return false; // kalau null, anggap boleh submit
+    if (!selectedMatkul?.visible_time) return false;
     return new Date() < new Date(selectedMatkul.visible_time);
   }, [selectedMatkul]);
 
@@ -94,15 +124,20 @@ export default function QuestionForm() {
       return;
     }
 
-    // kalau matkulnya tidak ada di list (mis. sudah hidden), blok
     if (!selectedMatkul) {
       alert("Mata kuliah tidak tersedia / sudah tidak aktif.");
       return;
     }
 
-    // blok submit kalau belum jam mulai
-    if (selectedMatkul.visible_time && new Date() < new Date(selectedMatkul.visible_time)) {
-      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
+    if (
+      selectedMatkul.visible_time &&
+      new Date() < new Date(selectedMatkul.visible_time)
+    ) {
+      alert(
+        `Belum bisa submit. Mulai: ${formatStartWIB(
+          selectedMatkul.visible_time,
+        )}`,
+      );
       return;
     }
 
@@ -136,7 +171,10 @@ export default function QuestionForm() {
       const params = new URLSearchParams(location.search);
       params.set("matkul_id", subjectId);
       params.set("page", "1");
-      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+      navigate(
+        { pathname: location.pathname, search: params.toString() },
+        { replace: true },
+      );
     } catch (err) {
       console.error(err);
       alert("Gagal mengirim soal");
@@ -155,7 +193,45 @@ export default function QuestionForm() {
     else searchParams.delete("matkul_id");
 
     searchParams.set("page", "1");
-    navigate({ pathname: location.pathname, search: searchParams.toString() }, { replace: true });
+    navigate(
+      { pathname: location.pathname, search: searchParams.toString() },
+      { replace: true },
+    );
+  };
+
+  // CTRL+SHIFT+E / CMD+SHIFT+E -> paste clipboard ke textarea pertanyaan
+  const normalizeClipboardText = (t: string) => t.replace(/\r\n/g, "\n");
+
+  const pasteClipboardIntoTextarea = async () => {
+    if (!navigator.clipboard?.readText) {
+      showNotif("Clipboard tidak didukung di browser ini.");
+      return;
+    }
+
+    try {
+      const textRaw = await navigator.clipboard.readText();
+      const text = normalizeClipboardText(textRaw || "").trim();
+
+      if (!text) {
+        showNotif("Tidak ada teks yang dicopy.");
+        return;
+      }
+
+      // REPLACE FULL (bukan insert di cursor)
+      setQuestion(text);
+
+      requestAnimationFrame(() => {
+        const el = questionRef.current;
+        if (!el) return;
+        el.focus();
+        const pos = text.length;
+        el.setSelectionRange(pos, pos); // cursor di akhir
+      });
+
+      showNotif("Teks dipaste dari clipboard.");
+    } catch {
+      showNotif("Tidak bisa akses clipboard. Coba Ctrl+V manual.");
+    }
   };
 
   return (
@@ -164,7 +240,9 @@ export default function QuestionForm() {
         <span className="text-blue-600 bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
           <MdEditDocument size={22} />
         </span>
-        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Soal</h3>
+        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+          Soal
+        </h3>
       </div>
 
       <form
@@ -172,13 +250,21 @@ export default function QuestionForm() {
         onSubmit={(e) => {
           e.preventDefault();
 
-          // cegah confirm kalau memang belum boleh submit
-          if (selectedMatkul?.visible_time && new Date() < new Date(selectedMatkul.visible_time)) {
-            alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
+          if (
+            selectedMatkul?.visible_time &&
+            new Date() < new Date(selectedMatkul.visible_time)
+          ) {
+            alert(
+              `Belum bisa submit. Mulai: ${formatStartWIB(
+                selectedMatkul.visible_time,
+              )}`,
+            );
             return;
           }
 
-          const confirmSubmit = window.confirm("Apakah Anda yakin ingin mengirim soal ini?");
+          const confirmSubmit = window.confirm(
+            "Apakah Anda yakin ingin mengirim soal ini?",
+          );
           if (confirmSubmit) handleSubmit(e);
         }}
       >
@@ -203,8 +289,7 @@ export default function QuestionForm() {
               const start = v.visible_time ? new Date(v.visible_time) : null;
               const end = v.invisible_time ? new Date(v.invisible_time) : null;
 
-              const isOngoing =
-                !!start && !!end && now >= start && now < end; // sedang berlangsung
+              const isOngoing = !!start && !!end && now >= start && now < end;
 
               const startLabel = start ? formatStartWIB(v.visible_time) : "";
 
@@ -223,9 +308,12 @@ export default function QuestionForm() {
             })}
           </select>
 
-          {/* info tambahan (opsional, enak buat UX) */}
           {selectedMatkul?.visible_time && (
-            <p className={`text-xs font-semibold ${isBeforeStart ? "text-red-600" : "text-green-600"}`}>
+            <p
+              className={`text-xs font-semibold ${
+                isBeforeStart ? "text-red-600" : "text-green-600"
+              }`}
+            >
               Mulai: {formatStartWIB(selectedMatkul.visible_time)}
               {isBeforeStart ? " (belum dibuka)" : " (sudah dibuka)"}
             </p>
@@ -254,15 +342,37 @@ export default function QuestionForm() {
           <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Konten Pertanyaan
           </label>
+
           <textarea
+            ref={questionRef}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Write your question here..."
+            placeholder="Write your question here... (Ctrl+Shift+E untuk paste clipboard)"
             className="w-full flex-1 min-h-[140px] rounded-lg border px-4 py-3 text-sm sm:text-base resize-y transition-all
-              border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400
-              dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-blue-500
-              focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+      border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400
+      dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-blue-500
+      focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
+
+          {notif && (
+            <div
+              className="rounded-lg border border-blue-200 bg-blue-50 text-blue-800 px-3 py-2 text-sm dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-200"
+              role="status"
+              aria-live="polite"
+            >
+              {notif}
+            </div>
+          )}
+
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+            <span>
+              <span className="font-semibold">Ctrl + Shift + E</span> (Windows)
+            </span>
+            /
+            <span>
+              <span className="font-semibold">Command + Shift + E</span> (Mac)
+            </span>
+          </p>
         </div>
 
         {/* Answer */}
@@ -299,7 +409,10 @@ export default function QuestionForm() {
         <div className="mt-auto">
           <button
             type="submit"
-            disabled={!!selectedMatkul?.visible_time && new Date() < new Date(selectedMatkul.visible_time)}
+            disabled={
+              !!selectedMatkul?.visible_time &&
+              new Date() < new Date(selectedMatkul.visible_time)
+            }
             className="group w-full h-12 flex items-center justify-center gap-2 rounded-lg
               bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base
               transition-all active:scale-[0.98]
@@ -313,7 +426,12 @@ export default function QuestionForm() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
             </svg>
           </button>
 
