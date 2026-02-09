@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MdTableChart, MdArrowUpward, MdArrowDownward, MdRefresh } from "react-icons/md";
+import {
+  MdTableChart,
+  MdArrowUpward,
+  MdArrowDownward,
+  MdRefresh,
+  MdSearch,
+  MdSmartToy,
+  MdAutoAwesome,
+  MdContentCopy,
+} from "react-icons/md";
 import supabase from "../../utils/supabase";
 import { useSearchParams } from "react-router-dom";
 
@@ -120,6 +129,61 @@ export default function RealtimeAnswers() {
     }
   };
 
+  /** ===================== ADDED: WEB-APP SAFE "ASK" + COPY ===================== */
+  const htmlToPlainText = (html: string) => {
+    try {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      return (doc.body?.textContent || "").trim();
+    } catch {
+      return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    }
+  };
+
+  const copyPrompt = async (questionHtml: string) => {
+    const text = htmlToPlainText(questionHtml);
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // fallback (jarang dipakai)
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand("copy");
+      } finally {
+        document.body.removeChild(ta);
+      }
+    }
+  };
+
+  const askGoogle = (questionHtml: string) => {
+    const qText = htmlToPlainText(questionHtml);
+    if (!qText) return;
+    const url = `https://www.google.com/search?hl=id&q=${encodeURIComponent(qText)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  // Prefill only (tidak auto-send)
+  const askChatGPT = (questionHtml: string) => {
+    const prompt = htmlToPlainText(questionHtml);
+    if (!prompt) return;
+    const url = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  // Gemini: tidak ada prefill URL yang native/andal -> open + copy agar tinggal paste
+  const askGemini = async (questionHtml: string) => {
+    await copyPrompt(questionHtml);
+    window.open("https://gemini.google.com/", "_blank", "noopener,noreferrer");
+  };
+  /** ========================================================================== */
+
   useEffect(() => {
     fetchQuestions();
     setRefreshCountdown(REFRESH_SECONDS);
@@ -225,6 +289,41 @@ export default function RealtimeAnswers() {
             onClick={() => vote(q.id, "incorrect")}
           >
             <MdArrowDownward /> Wrong
+          </button>
+        </div>
+
+        {/* ADDED: Ask buttons + copy (mobile) */}
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+            onClick={() => askGoogle(q.question)}
+            title="Cari pertanyaan ini di Google"
+          >
+            <MdSearch /> Google
+          </button>
+
+          <button
+            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+            onClick={() => askChatGPT(q.question)}
+            title="Buka ChatGPT dengan prompt ini"
+          >
+            <MdSmartToy /> ChatGPT
+          </button>
+
+          <button
+            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+            onClick={() => askGemini(q.question)}
+            title="Buka Gemini (prompt akan dicopy dulu)"
+          >
+            <MdAutoAwesome /> Gemini
+          </button>
+
+          <button
+            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+            onClick={() => copyPrompt(q.question)}
+            title="Copy prompt"
+          >
+            <MdContentCopy /> Copy
           </button>
         </div>
       </div>
@@ -339,10 +438,22 @@ export default function RealtimeAnswers() {
                         </span>
                       </td>
 
-                      <td
-                        className="py-4 px-6 text-sm text-gray-900 dark:text-white align-top break-words"
-                        dangerouslySetInnerHTML={{ __html: q.question }}
-                      />
+                      {/* Pertanyaan + Copy button di kolom ini (sesuai request) */}
+                      <td className="py-4 px-6 text-sm text-gray-900 dark:text-white align-top break-words">
+                        <div className="flex items-start gap-2">
+                          <div
+                            className="min-w-0 flex-1"
+                            dangerouslySetInnerHTML={{ __html: q.question }}
+                          />
+                          <button
+                            className="shrink-0 mt-0.5 p-2 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 transition"
+                            onClick={() => copyPrompt(q.question)}
+                            title="Copy pertanyaan"
+                          >
+                            <MdContentCopy />
+                          </button>
+                        </div>
+                      </td>
 
                       <td className="py-4 px-6 align-top">
                         <div className="flex flex-col gap-1.5">
@@ -364,6 +475,7 @@ export default function RealtimeAnswers() {
                       </td>
 
                       <td className="py-4 px-6 align-top">
+                        {/* Base vote buttons (tetap) */}
                         <div className="flex flex-col lg:flex-row gap-2">
                           <button
                             className="flex items-center justify-center gap-1 px-3 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition"
@@ -376,6 +488,33 @@ export default function RealtimeAnswers() {
                             onClick={() => vote(q.id, "incorrect")}
                           >
                             <MdArrowDownward /> Wrong
+                          </button>
+                        </div>
+
+                        {/* ADDED: Ask buttons */}
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button
+                            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+                            onClick={() => askGoogle(q.question)}
+                            title="Cari pertanyaan ini di Google"
+                          >
+                            <MdSearch /> Google
+                          </button>
+
+                          <button
+                            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+                            onClick={() => askChatGPT(q.question)}
+                            title="Buka ChatGPT dengan prompt ini"
+                          >
+                            <MdSmartToy /> ChatGPT
+                          </button>
+
+                          <button
+                            className="col-span-2 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+                            onClick={() => askGemini(q.question)}
+                            title="Buka Gemini (prompt akan dicopy dulu)"
+                          >
+                            <MdAutoAwesome /> Gemini (Copy & Open)
                           </button>
                         </div>
                       </td>
