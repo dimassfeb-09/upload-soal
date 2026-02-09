@@ -3,6 +3,9 @@ import { MdEditDocument } from "react-icons/md";
 import supabase from "../../utils/supabase";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 export default function QuestionForm() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -17,8 +20,7 @@ export default function QuestionForm() {
     return fromStorage ?? "";
   }, []);
 
-  const [selectedSubject, setSelectedSubject] =
-    useState<string>(initialSubject);
+  const [selectedSubject, setSelectedSubject] = useState<string>(initialSubject);
   const [source, setSource] = useState<string>("");
   const [question, setQuestion] = useState<string>("");
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
@@ -133,11 +135,7 @@ export default function QuestionForm() {
       selectedMatkul.visible_time &&
       new Date() < new Date(selectedMatkul.visible_time)
     ) {
-      alert(
-        `Belum bisa submit. Mulai: ${formatStartWIB(
-          selectedMatkul.visible_time,
-        )}`,
-      );
+      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
       return;
     }
 
@@ -162,7 +160,8 @@ export default function QuestionForm() {
 
       if (error) throw error;
 
-      alert("Soal berhasil dikirim!");
+      // ✅ Toast sukses (ganti alert)
+      toast.success("Berhasil telah submit!", { autoClose: 2000 });
 
       setQuestion("");
       setSelectedAnswer("");
@@ -177,7 +176,9 @@ export default function QuestionForm() {
       );
     } catch (err) {
       console.error(err);
-      alert("Gagal mengirim soal");
+
+      // ✅ Toast gagal (ganti alert)
+      toast.error("Gagal mengirim soal", { autoClose: 2500 });
     }
   };
 
@@ -254,18 +255,13 @@ export default function QuestionForm() {
             selectedMatkul?.visible_time &&
             new Date() < new Date(selectedMatkul.visible_time)
           ) {
-            alert(
-              `Belum bisa submit. Mulai: ${formatStartWIB(
-                selectedMatkul.visible_time,
-              )}`,
-            );
+            alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
             return;
           }
 
-          const confirmSubmit = window.confirm(
-            "Apakah Anda yakin ingin mengirim soal ini?",
-          );
-          if (confirmSubmit) handleSubmit(e);
+          // ✅ confirm tetap ada
+          const confirmSubmit = window.confirm("Apakah Anda yakin ingin mengirim soal ini?");
+          if (confirmSubmit) void handleSubmit(e);
         }}
       >
         {/* Subject */}
@@ -290,7 +286,6 @@ export default function QuestionForm() {
               const end = v.invisible_time ? new Date(v.invisible_time) : null;
 
               const isOngoing = !!start && !!end && now >= start && now < end;
-
               const startLabel = start ? formatStartWIB(v.visible_time) : "";
 
               const suffix = isOngoing
@@ -349,9 +344,9 @@ export default function QuestionForm() {
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Write your question here... (Ctrl+Shift+E untuk paste clipboard)"
             className="w-full flex-1 min-h-[140px] rounded-lg border px-4 py-3 text-sm sm:text-base resize-y transition-all
-      border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400
-      dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-blue-500
-      focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 hover:border-blue-400
+              dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-blue-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
 
           {notif && (
@@ -368,7 +363,7 @@ export default function QuestionForm() {
             <span>
               <span className="font-semibold">Ctrl + Shift + E</span> (Windows)
             </span>
-            /
+            /{" "}
             <span>
               <span className="font-semibold">Command + Shift + E</span> (Mac)
             </span>
