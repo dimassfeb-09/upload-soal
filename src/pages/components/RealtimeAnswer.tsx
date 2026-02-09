@@ -12,6 +12,9 @@ import {
 import supabase from "../../utils/supabase";
 import { useSearchParams } from "react-router-dom";
 
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 interface Soal {
   id: number;
   question: string;
@@ -45,13 +48,20 @@ export default function RealtimeAnswers() {
   // ref input search (untuk CTRL+F / CMD+F)
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ref untuk akses nilai searchTerm terbaru di event handler (hindari dependency effect)
+  // ref untuk akses nilai searchTerm terbaru di event handler
   const searchTermRef = useRef(searchTerm);
   useEffect(() => {
     searchTermRef.current = searchTerm;
   }, [searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+
+  // ✅ helper toast
+  const notify = {
+    success: (msg: string) => toast.success(msg, { autoClose: 1500 }),
+    info: (msg: string) => toast.info(msg, { autoClose: 1500 }),
+    error: (msg: string) => toast.error(msg, { autoClose: 2000 }),
+  };
 
   const fetchQuestions = async () => {
     if (!matkulId) {
@@ -114,29 +124,51 @@ export default function RealtimeAnswers() {
     }
   };
 
+  // ✅ Vote Optimistic: langsung naikkan di UI, tanpa fetch ulang
   const vote = async (id: number, type: "correct" | "incorrect") => {
+    notify.info(type === "correct" ? "Anda memberi vote Correct" : "Anda memberi vote Wrong");
+
+    // Simpan snapshot untuk rollback
+    const prev = questions.find((q) => q.id === id);
+    if (!prev) return;
+
+    // 1) Optimistic update UI
+    setQuestions((curr) =>
+      curr.map((q) => {
+        if (q.id !== id) return q;
+        if (type === "correct") {
+          return { ...q, correct_counts: (q.correct_counts || 0) + 1 };
+        }
+        return { ...q, incorrect_counts: (q.incorrect_counts || 0) + 1 };
+      }),
+    );
+
+    // 2) Update server
     try {
-      const { data: currentData, error: fetchError } = await supabase
-        .from("soal")
-        .select("correct_counts, incorrect_counts")
-        .eq("id", id)
-        .single();
-
-      if (fetchError) return;
-
-      const updates: { correct_counts?: number; incorrect_counts?: number } =
-        {};
-      if (type === "correct")
-        updates.correct_counts = (currentData?.correct_counts || 0) + 1;
-      else updates.incorrect_counts = (currentData?.incorrect_counts || 0) + 1;
+      // Ambil nilai terbaru dari server (optional). Tapi biar sederhana:
+      // kita update berdasarkan nilai yang sudah ada di "prev" snapshot.
+      const updates =
+        type === "correct"
+          ? { correct_counts: (prev.correct_counts || 0) + 1 }
+          : { incorrect_counts: (prev.incorrect_counts || 0) + 1 };
 
       const { error } = await supabase.from("soal").update(updates).eq("id", id);
-      if (error) return;
+      if (error) throw error;
 
-      fetchQuestions();
+      // sukses: tidak perlu fetch ulang
       setRefreshCountdown(REFRESH_SECONDS);
     } catch (err) {
       console.error(err);
+
+      // 3) rollback kalau gagal
+      setQuestions((curr) =>
+        curr.map((q) => {
+          if (q.id !== id) return q;
+          return prev; // balik ke snapshot
+        }),
+      );
+
+      notify.error("Gagal mengirim vote");
     }
   };
 
@@ -146,10 +178,7 @@ export default function RealtimeAnswers() {
       const doc = new DOMParser().parseFromString(html, "text/html");
       return (doc.body?.textContent || "").trim();
     } catch {
-      return html
-        .replace(/<[^>]*>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+      return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     }
   };
 
@@ -159,6 +188,7 @@ export default function RealtimeAnswers() {
 
     try {
       await navigator.clipboard.writeText(text);
+      notify.success("Berhasil dicopy");
     } catch {
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -169,6 +199,9 @@ export default function RealtimeAnswers() {
       ta.select();
       try {
         document.execCommand("copy");
+        notify.success("Berhasil dicopy");
+      } catch {
+        notify.error("Gagal copy");
       } finally {
         document.body.removeChild(ta);
       }
@@ -178,21 +211,22 @@ export default function RealtimeAnswers() {
   const askGoogle = (questionHtml: string) => {
     const qText = htmlToPlainText(questionHtml);
     if (!qText) return;
-    const url = `https://www.google.com/search?hl=id&q=${encodeURIComponent(
-      qText,
-    )}`;
+    notify.info("Membuka Google…");
+    const url = `https://www.google.com/search?hl=id&q=${encodeURIComponent(qText)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const askChatGPT = (questionHtml: string) => {
     const prompt = htmlToPlainText(questionHtml);
     if (!prompt) return;
+    notify.info("Membuka ChatGPT…");
     const url = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const askGemini = async (questionHtml: string) => {
     await copyPrompt(questionHtml);
+    notify.info("Membuka Gemini…");
     window.open("https://gemini.google.com/", "_blank", "noopener,noreferrer");
   };
   /** =================================================================== */
@@ -202,27 +236,20 @@ export default function RealtimeAnswers() {
 
   const focusAndSelectSearch = () => {
     searchInputRef.current?.focus();
-    // select text biar langsung replace
     setTimeout(() => searchInputRef.current?.select(), 0);
   };
 
   const tryPasteClipboardReplaceSearch = async () => {
-    // readText butuh secure context + izin browser
     if (!navigator.clipboard?.readText) return false;
 
     try {
       const text = normalizeClipboardText(await navigator.clipboard.readText());
       if (!text) return false;
 
-      // RULE: kalau input ada isinya, clear lalu replace
-      // (setSearchTerm langsung replace saja sudah cukup)
       setSearchTerm(text);
-
-      // select lagi setelah value berubah
       requestAnimationFrame(() => searchInputRef.current?.select());
       return true;
     } catch {
-      // permission ditolak
       return false;
     }
   };
@@ -234,12 +261,7 @@ export default function RealtimeAnswers() {
       if (!isFind) return;
 
       e.preventDefault();
-
-      // fokus + select dulu
       focusAndSelectSearch();
-
-      // coba auto paste clipboard (kalau diizinkan)
-      // kalau gagal (permission), tetap fokus/select saja (user bisa Ctrl+V)
       void tryPasteClipboardReplaceSearch();
     };
 
@@ -254,6 +276,7 @@ export default function RealtimeAnswers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matkulId, page, searchTerm]);
 
+  // Auto refresh (optional) - tetap aman walau vote optimistic
   useEffect(() => {
     let countdown = REFRESH_SECONDS;
     setRefreshCountdown(countdown);
@@ -300,10 +323,8 @@ export default function RealtimeAnswers() {
 
   const CardRow = ({ q }: { q: Soal }) => {
     const totalVotes = (q.correct_counts || 0) + (q.incorrect_counts || 0);
-    const correctPct =
-      totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
-    const wrongPct =
-      totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
+    const correctPct = totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
+    const wrongPct = totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
 
     return (
       <div className="rounded-xl border p-4 bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -313,9 +334,7 @@ export default function RealtimeAnswers() {
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                 {q.answer}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                ID: {q.id}
-              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">ID: {q.id}</span>
             </div>
 
             <div
@@ -327,14 +346,8 @@ export default function RealtimeAnswers() {
 
         <div className="mt-3">
           <div className="h-2 w-full rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
-            <div
-              className="h-full bg-teal-500"
-              style={{ width: `${correctPct}%` }}
-            />
-            <div
-              className="h-full bg-red-500"
-              style={{ width: `${wrongPct}%` }}
-            />
+            <div className="h-full bg-teal-500" style={{ width: `${correctPct}%` }} />
+            <div className="h-full bg-red-500" style={{ width: `${wrongPct}%` }} />
           </div>
 
           <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
@@ -417,8 +430,7 @@ export default function RealtimeAnswers() {
               Monitor Jawaban
             </h3>
             <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
-              Auto refresh dalam {refreshCountdown} detik (tiap{" "}
-              {REFRESH_SECONDS} detik)
+              Auto refresh dalam {refreshCountdown} detik (tiap {REFRESH_SECONDS} detik)
             </p>
           </div>
         </div>
@@ -434,12 +446,12 @@ export default function RealtimeAnswers() {
           />
 
           <div className="flex gap-2">
-            {/* Clear */}
             <button
               onClick={() => {
                 setSearchTerm("");
                 goToPage(1);
                 setRefreshCountdown(REFRESH_SECONDS);
+                notify.info("Pencarian dikosongkan");
               }}
               disabled={!searchTerm.trim() || loading}
               className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition disabled:opacity-50"
@@ -448,11 +460,11 @@ export default function RealtimeAnswers() {
               Clear
             </button>
 
-            {/* Refresh */}
             <button
               onClick={() => {
                 fetchQuestions();
                 setRefreshCountdown(REFRESH_SECONDS);
+                notify.info("Data di-refresh");
               }}
               className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
               title="Refresh sekarang"
@@ -503,14 +515,9 @@ export default function RealtimeAnswers() {
 
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {questions.map((q) => {
-                  const totalVotes =
-                    (q.correct_counts || 0) + (q.incorrect_counts || 0);
-                  const correctPct =
-                    totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
-                  const wrongPct =
-                    totalVotes > 0
-                      ? (q.incorrect_counts / totalVotes) * 100
-                      : 0;
+                  const totalVotes = (q.correct_counts || 0) + (q.incorrect_counts || 0);
+                  const correctPct = totalVotes > 0 ? (q.correct_counts / totalVotes) * 100 : 0;
+                  const wrongPct = totalVotes > 0 ? (q.incorrect_counts / totalVotes) * 100 : 0;
 
                   return (
                     <tr
@@ -547,14 +554,8 @@ export default function RealtimeAnswers() {
                         <div className="flex flex-col gap-5">
                           <div className="flex flex-col gap-1.5">
                             <div className="h-2 w-full rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
-                              <div
-                                className="h-full bg-teal-500"
-                                style={{ width: `${correctPct}%` }}
-                              />
-                              <div
-                                className="h-full bg-red-500"
-                                style={{ width: `${wrongPct}%` }}
-                              />
+                              <div className="h-full bg-teal-500" style={{ width: `${correctPct}%` }} />
+                              <div className="h-full bg-red-500" style={{ width: `${wrongPct}%` }} />
                             </div>
                             <div className="flex gap-3 text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">
                               <span className="flex items-center gap-1">
