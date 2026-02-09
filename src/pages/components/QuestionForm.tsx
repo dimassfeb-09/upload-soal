@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ConfirmDialog from "./ConfirmDialog";
+
 
 export default function QuestionForm() {
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -24,6 +26,10 @@ export default function QuestionForm() {
   const [source, setSource] = useState<string>("");
   const [question, setQuestion] = useState<string>("");
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
+
+  // ✅ dialog confirm + loading submit
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ref textarea + notif kecil
   const questionRef = useRef<HTMLTextAreaElement>(null);
@@ -76,15 +82,10 @@ export default function QuestionForm() {
     const onGlobalKeyDown = (e: KeyboardEvent) => {
       const key = e.key?.toLowerCase();
       const isShortcut = (e.ctrlKey || e.metaKey) && e.shiftKey && key === "e";
-
       if (!isShortcut) return;
 
       e.preventDefault();
-
-      // Fokus ke textarea pertanyaan dulu
       questionRef.current?.focus();
-
-      // Lalu paste clipboard
       void pasteClipboardIntoTextarea();
     };
 
@@ -118,69 +119,13 @@ export default function QuestionForm() {
     return new Date() < new Date(selectedMatkul.visible_time);
   }, [selectedMatkul]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedSubject) {
-      alert("Pilih subject dulu!");
-      return;
-    }
-
-    if (!selectedMatkul) {
-      alert("Mata kuliah tidak tersedia / sudah tidak aktif.");
-      return;
-    }
-
-    if (
-      selectedMatkul.visible_time &&
+  // subject belum dibuka?
+  const isDisabledByTime = useMemo(() => {
+    return (
+      !!selectedMatkul?.visible_time &&
       new Date() < new Date(selectedMatkul.visible_time)
-    ) {
-      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
-      return;
-    }
-
-    if (!question.trim() || !selectedAnswer) {
-      alert("Lengkapi soal dan jawaban!");
-      return;
-    }
-
-    const subjectId = selectedSubject;
-
-    try {
-      const formattedQuestion = question.replace(/\n/g, "<br>");
-
-      const { error } = await supabase.from("soal").insert([
-        {
-          matkul_id: subjectId,
-          source,
-          question: formattedQuestion,
-          answer: selectedAnswer,
-        },
-      ]);
-
-      if (error) throw error;
-
-      // ✅ Toast sukses (ganti alert)
-      toast.success("Berhasil telah submit!", { autoClose: 2000 });
-
-      setQuestion("");
-      setSelectedAnswer("");
-      setSource("");
-
-      const params = new URLSearchParams(location.search);
-      params.set("matkul_id", subjectId);
-      params.set("page", "1");
-      navigate(
-        { pathname: location.pathname, search: params.toString() },
-        { replace: true },
-      );
-    } catch (err) {
-      console.error(err);
-
-      // ✅ Toast gagal (ganti alert)
-      toast.error("Gagal mengirim soal", { autoClose: 2500 });
-    }
-  };
+    );
+  }, [selectedMatkul]);
 
   const handleChangeSubject = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -218,7 +163,6 @@ export default function QuestionForm() {
         return;
       }
 
-      // REPLACE FULL (bukan insert di cursor)
       setQuestion(text);
 
       requestAnimationFrame(() => {
@@ -226,12 +170,91 @@ export default function QuestionForm() {
         if (!el) return;
         el.focus();
         const pos = text.length;
-        el.setSelectionRange(pos, pos); // cursor di akhir
+        el.setSelectionRange(pos, pos);
       });
 
       showNotif("Teks dipaste dari clipboard.");
     } catch {
       showNotif("Tidak bisa akses clipboard. Coba Ctrl+V manual.");
+    }
+  };
+
+  // ✅ Buka confirm dialog (tetap ada pengecekan "belum dibuka")
+  const openConfirmDialog = () => {
+    if (isDisabledByTime) {
+      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul?.visible_time)}`);
+      return;
+    }
+    setOpenConfirm(true);
+  };
+
+  // ✅ Submit asli setelah user klik "Ya, kirim" di dialog
+  const submitConfirmed = async () => {
+    if (isSubmitting) return;
+
+    if (!selectedSubject) {
+      alert("Pilih subject dulu!");
+      return;
+    }
+
+    if (!selectedMatkul) {
+      alert("Mata kuliah tidak tersedia / sudah tidak aktif.");
+      return;
+    }
+
+    if (
+      selectedMatkul.visible_time &&
+      new Date() < new Date(selectedMatkul.visible_time)
+    ) {
+      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
+      return;
+    }
+
+    if (!question.trim() || !selectedAnswer) {
+      alert("Lengkapi soal dan jawaban!");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const formattedQuestion = question.replace(/\n/g, "<br>");
+
+      const { error } = await supabase.from("soal").insert([
+        {
+          matkul_id: selectedSubject,
+          source,
+          question: formattedQuestion,
+          answer: selectedAnswer,
+        },
+      ]);
+
+      if (error) throw error;
+
+      // ✅ toast sukses (tanpa alert)
+      toast.success("Berhasil telah submit!", { autoClose: 2000 });
+
+      setQuestion("");
+      setSelectedAnswer("");
+      setSource("");
+
+      // tutup dialog
+      setOpenConfirm(false);
+
+      const params = new URLSearchParams(location.search);
+      params.set("matkul_id", selectedSubject);
+      params.set("page", "1");
+      navigate(
+        { pathname: location.pathname, search: params.toString() },
+        { replace: true },
+      );
+    } catch (err) {
+      console.error(err);
+
+      // ✅ toast error (tanpa alert)
+      toast.error("Gagal mengirim soal", { autoClose: 2500 });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -246,24 +269,8 @@ export default function QuestionForm() {
         </h3>
       </div>
 
-      <form
-        className="flex flex-col gap-4 sm:gap-5 h-full"
-        onSubmit={(e) => {
-          e.preventDefault();
-
-          if (
-            selectedMatkul?.visible_time &&
-            new Date() < new Date(selectedMatkul.visible_time)
-          ) {
-            alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
-            return;
-          }
-
-          // ✅ confirm tetap ada
-          const confirmSubmit = window.confirm("Apakah Anda yakin ingin mengirim soal ini?");
-          if (confirmSubmit) void handleSubmit(e);
-        }}
-      >
+      {/* Form untuk layout saja */}
+      <form className="flex flex-col gap-4 sm:gap-5 h-full" onSubmit={(e) => e.preventDefault()}>
         {/* Subject */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
@@ -403,18 +410,16 @@ export default function QuestionForm() {
         {/* Submit */}
         <div className="mt-auto">
           <button
-            type="submit"
-            disabled={
-              !!selectedMatkul?.visible_time &&
-              new Date() < new Date(selectedMatkul.visible_time)
-            }
+            type="button"
+            onClick={openConfirmDialog}
+            disabled={isDisabledByTime || isSubmitting}
             className="group w-full h-12 flex items-center justify-center gap-2 rounded-lg
               bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base
               transition-all active:scale-[0.98]
               shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30
               disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:active:scale-100"
           >
-            <span>Kirim Soal</span>
+            <span>{isSubmitting ? "Mengirim..." : "Kirim Soal"}</span>
             <svg
               className="w-5 h-5 group-hover:translate-x-1 transition-transform"
               fill="none"
@@ -444,6 +449,18 @@ export default function QuestionForm() {
           </div>
         </div>
       </form>
+
+      {/* ✅ Confirm Dialog manual */}
+      <ConfirmDialog
+        open={openConfirm}
+        title="Kirim soal ini?"
+        description="Pastikan pertanyaan dan jawaban sudah benar. Setelah dikirim, soal akan tersimpan."
+        confirmText="Ya, kirim"
+        cancelText="Batal"
+        loading={isSubmitting}
+        onCancel={() => setOpenConfirm(false)}
+        onConfirm={submitConfirmed}
+      />
     </div>
   );
 }
