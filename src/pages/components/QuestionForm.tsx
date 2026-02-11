@@ -364,7 +364,6 @@ export default function QuestionForm() {
         onSubmit={(e) => e.preventDefault()}
       >
         {/* Subject */}
-        {/* Subject */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Mata Kuliah (Required)
@@ -454,17 +453,19 @@ export default function QuestionForm() {
                     ${isSelected ? "bg-blue-50 dark:bg-gray-700/50" : "bg-transparent"}
                     border-b border-gray-100 dark:border-gray-700`}
                         >
-                          {/* Row 1: Title + Badge */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="truncate font-semibold text-gray-900 dark:text-white">
+                          {/* Row 1: Title + Badge (FIX: judul wrap + badge turun di mobile) */}
+                          <div className="flex flex-col gap-2 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                            {/* Title: wrap (tidak truncate) */}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-gray-900 dark:text-white whitespace-normal break-words leading-snug">
                                 {v.name}
                               </div>
                             </div>
 
+                            {/* Badge: tidak makan ruang judul di mobile */}
                             {status && (
                               <span
-                                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${status.cls}`}
+                                className={`self-start sm:self-auto shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ${status.cls}`}
                               >
                                 {status.text}
                               </span>
@@ -476,12 +477,16 @@ export default function QuestionForm() {
                             <div className="font-semibold text-gray-500 dark:text-gray-300">
                               Dimulai
                             </div>
-                            <div className="truncate">{startLabel}</div>
+                            <div className="whitespace-normal break-words">
+                              {startLabel}
+                            </div>
 
                             <div className="font-semibold text-gray-500 dark:text-gray-300">
                               Berakhir
                             </div>
-                            <div className="truncate">{endLabel}</div>
+                            <div className="whitespace-normal break-words">
+                              {endLabel}
+                            </div>
                           </div>
                         </button>
                       );
