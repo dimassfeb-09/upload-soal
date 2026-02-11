@@ -7,7 +7,6 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ConfirmDialog from "./ConfirmDialog";
 
-
 export default function QuestionForm() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -22,16 +21,15 @@ export default function QuestionForm() {
     return fromStorage ?? "";
   }, []);
 
-  const [selectedSubject, setSelectedSubject] = useState<string>(initialSubject);
+  const [selectedSubject, setSelectedSubject] =
+    useState<string>(initialSubject);
   const [source, setSource] = useState<string>("");
   const [question, setQuestion] = useState<string>("");
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
 
-  // ✅ dialog confirm + loading submit
   const [openConfirm, setOpenConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ref textarea + notif kecil
   const questionRef = useRef<HTMLTextAreaElement>(null);
   const [notif, setNotif] = useState<string>("");
   const showNotif = (msg: string) => {
@@ -39,10 +37,28 @@ export default function QuestionForm() {
     window.setTimeout(() => setNotif(""), 2000);
   };
 
-  // helper: format visible_time ke WIB untuk ditampilkan di option
-  const formatStartWIB = (iso?: string | null) => {
-    if (!iso) return "";
-    const d = new Date(iso);
+  // =========================
+  // ✅ TIME PARSER (anti timezone mismatch)
+  // =========================
+  const parseTime = (raw?: string | null) => {
+    if (!raw) return null;
+
+    let s = String(raw).trim().replace(" ", "T");
+
+    // kalau tidak ada timezone, anggap WIB
+    const hasTz = /([zZ]|[+-]\d{2}:\d{2})$/.test(s);
+    if (!hasTz) s = `${s}+07:00`;
+
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  };
+
+  const formatWIB = (iso?: string | null) => {
+    if (!iso) return "-";
+    const d = parseTime(iso);
+    if (!d) return "-";
+
     const formatter = new Intl.DateTimeFormat("id-ID", {
       timeZone: "Asia/Jakarta",
       day: "2-digit",
@@ -54,7 +70,12 @@ export default function QuestionForm() {
     return `${formatter.format(d)} WIB`;
   };
 
-  // ambil data matkul yang belum lewat invisible_time (atau invisible_time null)
+  const isExpired = (m: any) => {
+    const end = parseTime(m?.invisible_time);
+    if (!end) return false;
+    return new Date() >= end;
+  };
+
   const fetchSubjects = async () => {
     try {
       const nowIso = new Date().toISOString();
@@ -109,26 +130,51 @@ export default function QuestionForm() {
     else localStorage.removeItem("selected_matkul_id");
   }, [location.search]);
 
-  // cari matkul terpilih + cek apakah sudah mulai
+  const availableSubjects = useMemo(() => {
+    return (subjects || []).filter((s) => !isExpired(s));
+  }, [subjects]);
+
   const selectedMatkul = useMemo(() => {
-    return subjects.find((s) => String(s.id) === String(selectedSubject));
-  }, [subjects, selectedSubject]);
+    return availableSubjects.find(
+      (s) => String(s.id) === String(selectedSubject),
+    );
+  }, [availableSubjects, selectedSubject]);
+
+  useEffect(() => {
+    if (!selectedSubject) return;
+
+    const stillExists = availableSubjects.some(
+      (s) => String(s.id) === String(selectedSubject),
+    );
+
+    if (!stillExists) {
+      setSelectedSubject("");
+      localStorage.removeItem("selected_matkul_id");
+
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.delete("matkul_id");
+      searchParams.set("page", "1");
+      navigate(
+        { pathname: location.pathname, search: searchParams.toString() },
+        { replace: true },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableSubjects, selectedSubject]);
 
   const isBeforeStart = useMemo(() => {
-    if (!selectedMatkul?.visible_time) return false;
-    return new Date() < new Date(selectedMatkul.visible_time);
+    const start = parseTime(selectedMatkul?.visible_time);
+    if (!start) return false;
+    return new Date() < start;
   }, [selectedMatkul]);
 
-  // subject belum dibuka?
   const isDisabledByTime = useMemo(() => {
-    return (
-      !!selectedMatkul?.visible_time &&
-      new Date() < new Date(selectedMatkul.visible_time)
-    );
+    const start = parseTime(selectedMatkul?.visible_time);
+    if (!start) return false;
+    return new Date() < start;
   }, [selectedMatkul]);
 
-  const handleChangeSubject = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+  const setSubjectById = (value: string) => {
     setSelectedSubject(value);
 
     if (value) localStorage.setItem("selected_matkul_id", value);
@@ -143,6 +189,50 @@ export default function QuestionForm() {
       { pathname: location.pathname, search: searchParams.toString() },
       { replace: true },
     );
+  };
+
+  // =========================
+  // ✅ SEARCHABLE SUBJECT DROPDOWN
+  // =========================
+  const [subjectSearch, setSubjectSearch] = useState("");
+  const [openSubjectDropdown, setOpenSubjectDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedMatkul?.name) setSubjectSearch(String(selectedMatkul.name));
+    if (!selectedSubject) setSubjectSearch("");
+  }, [selectedMatkul, selectedSubject]);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const el = dropdownRef.current;
+      if (!el) return;
+      if (!el.contains(e.target as Node)) setOpenSubjectDropdown(false);
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const filteredSubjects = useMemo(() => {
+    const q = subjectSearch.trim().toLowerCase();
+
+    const typedIsSelectedName =
+      selectedMatkul?.name &&
+      q === String(selectedMatkul.name).trim().toLowerCase();
+
+    if (!q || typedIsSelectedName) return availableSubjects;
+
+    return availableSubjects.filter((v) => {
+      const name = String(v.name ?? "").toLowerCase();
+      return name.includes(q);
+    });
+  }, [subjectSearch, availableSubjects, selectedMatkul]);
+
+  const onSubjectKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setOpenSubjectDropdown(false);
+      (e.target as HTMLInputElement).blur();
+    }
   };
 
   // CTRL+SHIFT+E / CMD+SHIFT+E -> paste clipboard ke textarea pertanyaan
@@ -179,16 +269,20 @@ export default function QuestionForm() {
     }
   };
 
-  // ✅ Buka confirm dialog (tetap ada pengecekan "belum dibuka")
   const openConfirmDialog = () => {
+    if (!selectedMatkul) {
+      alert("Pilih subject dulu / mata kuliah sudah tidak aktif.");
+      return;
+    }
     if (isDisabledByTime) {
-      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul?.visible_time)}`);
+      alert(
+        `Belum bisa submit. Mulai: ${formatWIB(selectedMatkul?.visible_time)}`,
+      );
       return;
     }
     setOpenConfirm(true);
   };
 
-  // ✅ Submit asli setelah user klik "Ya, kirim" di dialog
   const submitConfirmed = async () => {
     if (isSubmitting) return;
 
@@ -202,11 +296,11 @@ export default function QuestionForm() {
       return;
     }
 
-    if (
-      selectedMatkul.visible_time &&
-      new Date() < new Date(selectedMatkul.visible_time)
-    ) {
-      alert(`Belum bisa submit. Mulai: ${formatStartWIB(selectedMatkul.visible_time)}`);
+    const start = parseTime(selectedMatkul.visible_time);
+    if (start && new Date() < start) {
+      alert(
+        `Belum bisa submit. Mulai: ${formatWIB(selectedMatkul.visible_time)}`,
+      );
       return;
     }
 
@@ -231,14 +325,12 @@ export default function QuestionForm() {
 
       if (error) throw error;
 
-      // ✅ toast sukses (tanpa alert)
       toast.success("Berhasil telah submit!", { autoClose: 2000 });
 
       setQuestion("");
       setSelectedAnswer("");
       setSource("");
 
-      // tutup dialog
       setOpenConfirm(false);
 
       const params = new URLSearchParams(location.search);
@@ -250,8 +342,6 @@ export default function QuestionForm() {
       );
     } catch (err) {
       console.error(err);
-
-      // ✅ toast error (tanpa alert)
       toast.error("Gagal mengirim soal", { autoClose: 2500 });
     } finally {
       setIsSubmitting(false);
@@ -269,54 +359,147 @@ export default function QuestionForm() {
         </h3>
       </div>
 
-      {/* Form untuk layout saja */}
-      <form className="flex flex-col gap-4 sm:gap-5 h-full" onSubmit={(e) => e.preventDefault()}>
+      <form
+        className="flex flex-col gap-4 sm:gap-5 h-full"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        {/* Subject */}
         {/* Subject */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">
             Mata Kuliah (Required)
           </label>
 
-          <select
-            value={selectedSubject}
-            onChange={handleChangeSubject}
-            className="w-full appearance-none rounded-lg border px-4 py-3 text-sm sm:text-base transition-all cursor-pointer
-              border-gray-300 bg-white text-gray-900 hover:border-blue-400
-              dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:border-blue-500
-              focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-          >
-            <option value="">Select a subject</option>
+          <div ref={dropdownRef} className="relative">
+            {/* Search Input */}
+            <div className="relative">
+              <input
+                value={subjectSearch}
+                onChange={(e) => {
+                  setSubjectSearch(e.target.value);
+                  setOpenSubjectDropdown(true);
+                }}
+                onFocus={() => setOpenSubjectDropdown(true)}
+                onKeyDown={onSubjectKeyDown}
+                placeholder="Search mata kuliah..."
+                className="w-full rounded-lg border px-4 py-3 text-sm sm:text-base transition-all
+          border-gray-300 bg-white text-gray-900 placeholder:text-gray-400
+          hover:border-blue-400
+          dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400
+          dark:hover:border-blue-500
+          focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
 
-            {subjects.map((v) => {
-              const now = new Date();
-              const start = v.visible_time ? new Date(v.visible_time) : null;
-              const end = v.invisible_time ? new Date(v.invisible_time) : null;
+              {/* hint kecil */}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-gray-300">
+                ESC
+              </div>
+            </div>
 
-              const isOngoing = !!start && !!end && now >= start && now < end;
-              const startLabel = start ? formatStartWIB(v.visible_time) : "";
+            {/* Dropdown */}
+            {openSubjectDropdown && (
+              <div
+                className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border bg-white shadow-xl
+          border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+              >
+                {/* Header kecil */}
+                <div className="px-4 py-2 text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+                  Hasil: {filteredSubjects.length}
+                </div>
 
-              const suffix = isOngoing
-                ? " - 🟢 Sedang berlangsung"
-                : startLabel
-                  ? ` - Dibuka ${startLabel}`
-                  : "";
+                <div className="max-h-80 overflow-auto">
+                  {filteredSubjects.length === 0 ? (
+                    <div className="px-4 py-4 text-sm text-gray-500 dark:text-gray-300">
+                      Tidak ada mata kuliah yang cocok.
+                    </div>
+                  ) : (
+                    filteredSubjects.map((v) => {
+                      const now = new Date();
+                      const start = parseTime(v.visible_time);
+                      const end = parseTime(v.invisible_time);
 
-              return (
-                <option key={v.id} value={String(v.id)}>
-                  {v.name}
-                  {suffix}
-                </option>
-              );
-            })}
-          </select>
+                      const isOngoing =
+                        !!start && !!end && now >= start && now < end;
+                      const isNotStarted = !!start && now < start;
 
+                      const status = isOngoing
+                        ? {
+                            text: "🟢 Sedang berlangsung",
+                            cls: "text-green-700 bg-green-100 dark:text-green-200 dark:bg-green-900/30",
+                          }
+                        : isNotStarted
+                          ? {
+                              text: "⏳ Belum mulai",
+                              cls: "text-amber-700 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/30",
+                            }
+                          : null;
+
+                      const startLabel = formatWIB(v.visible_time);
+                      const endLabel = formatWIB(v.invisible_time);
+
+                      const isSelected =
+                        String(v.id) === String(selectedSubject);
+
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => {
+                            setSubjectById(String(v.id));
+                            setSubjectSearch(String(v.name ?? ""));
+                            setOpenSubjectDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 transition-colors
+                    hover:bg-blue-50 dark:hover:bg-gray-700/50
+                    ${isSelected ? "bg-blue-50 dark:bg-gray-700/50" : "bg-transparent"}
+                    border-b border-gray-100 dark:border-gray-700`}
+                        >
+                          {/* Row 1: Title + Badge */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold text-gray-900 dark:text-white">
+                                {v.name}
+                              </div>
+                            </div>
+
+                            {status && (
+                              <span
+                                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${status.cls}`}
+                              >
+                                {status.text}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Row 2: Times (clean grid) */}
+                          <div className="mt-2 grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
+                            <div className="font-semibold text-gray-500 dark:text-gray-300">
+                              Dimulai
+                            </div>
+                            <div className="truncate">{startLabel}</div>
+
+                            <div className="font-semibold text-gray-500 dark:text-gray-300">
+                              Berakhir
+                            </div>
+                            <div className="truncate">{endLabel}</div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Info matkul terpilih */}
           {selectedMatkul?.visible_time && (
             <p
               className={`text-xs font-semibold ${
                 isBeforeStart ? "text-red-600" : "text-green-600"
               }`}
             >
-              Mulai: {formatStartWIB(selectedMatkul.visible_time)}
+              Mulai: {formatWIB(selectedMatkul.visible_time)}
               {isBeforeStart ? " (belum dibuka)" : " (sudah dibuka)"}
             </p>
           )}
@@ -450,7 +633,6 @@ export default function QuestionForm() {
         </div>
       </form>
 
-      {/* ✅ Confirm Dialog manual */}
       <ConfirmDialog
         open={openConfirm}
         title="Kirim soal ini?"
